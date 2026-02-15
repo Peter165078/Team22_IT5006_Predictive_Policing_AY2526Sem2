@@ -4,6 +4,7 @@ import plotly.express as px
 import plotly.graph_objects as go
 import pydeck as pdk
 import os
+import zipfile
 
 # --- 1. 全局配置 ---
 st.set_page_config(
@@ -37,27 +38,36 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# --- 4. 数据加载函数 (只定义，不运行) ---
+# --- 4. 核心修复：绝对路径定位函数 ---
+def get_file_path(year):
+    # 1. 获取 app.py 当前所在的绝对路径 (确保这一定是对的)
+    current_file_dir = os.path.dirname(os.path.abspath(__file__))
+    
+    # 2. 定义所有可能的路径组合
+    # 优先找: app.py同级目录/split_data_by_year/文件名
+    # 其次找: app.py同级目录/文件名 (以防万一你放外面了)
+    possible_paths = [
+        os.path.join(current_file_dir, "split_data_by_year", f"chicago_crime_{year}.csv.zip"),
+        os.path.join(current_file_dir, "split_data_by_year", f"chicago_crime_{year}.zip"),
+        os.path.join(current_file_dir, f"chicago_crime_{year}.csv.zip"),
+        os.path.join(current_file_dir, f"chicago_crime_{year}.zip")
+    ]
+    
+    for path in possible_paths:
+        if os.path.exists(path):
+            return path
+    return None
+
+# --- 5. 数据加载函数 ---
 @st.cache_data
 def load_data(year):
-    possible_files = [f"chicago_crime_{year}.csv.zip", f"chicago_crime_{year}.zip"]
-    search_dirs = [".", "split_data_by_year"]
-    
-    found_path = None
-    for d in search_dirs:
-        for f in possible_files:
-            test_path = os.path.join(d, f)
-            if os.path.exists(test_path):
-                found_path = test_path
-                break
-        if found_path: break
+    found_path = get_file_path(year)
 
     if found_path:
-        import zipfile
         try:
             with zipfile.ZipFile(found_path, 'r') as z:
-                # 过滤 Mac 隐藏文件
-                csv_files = [name for name in z.namelist() if name.endswith('.csv') and not name.startswith('__MACOSX')]
+                # 过滤 Mac 垃圾
+                csv_files = [n for n in z.namelist() if n.endswith('.csv') and not n.startswith('__MACOSX')]
                 if csv_files:
                     with z.open(csv_files[0]) as f:
                         cols = ['Date', 'Primary Type', 'Description', 'Arrest', 'District', 'Latitude', 'Longitude', 'Location Description']
@@ -68,7 +78,7 @@ def load_data(year):
                         df['DayOfWeek'] = df['Date'].dt.day_name()
                         return df
         except Exception as e:
-            st.error(f"Error reading zip file: {e}")
+            st.error(f"Error reading {found_path}: {e}")
             return None
     return None
 
@@ -92,27 +102,22 @@ if st.session_state.app_mode == 'Welcome':
         
         st.markdown("<br>", unsafe_allow_html=True)
         
-        # --- 🔍 修复版扫描逻辑：必须显式查找 .csv.zip ---
+        # --- 扫描可用年份 ---
         available_years = []
-        search_dirs = [".", "split_data_by_year"] 
-        
         for y in range(2014, 2025):
-            found = False
-            for d in search_dirs:
-                if os.path.exists(os.path.join(d, f"chicago_crime_{y}.csv.zip")) or \
-                   os.path.exists(os.path.join(d, f"chicago_crime_{y}.zip")) or \
-                   os.path.exists(os.path.join(d, f"chicago_crime_{y}.csv")):
-                    found = True
-                    break
-            if found:
+            if get_file_path(y): # 使用新的绝对路径函数检测
                 available_years.append(y)
         
-        # 如果没扫到，保底 2024
-        if not available_years: available_years = [2024]
+        # 如果依然没找到，保留 2024 以防报错
+        if not available_years: 
+            available_years = [2024]
+            scan_failed = True
+        else:
+            scan_failed = False
         
         st.markdown("### 📅 Select Analysis Year")
         
-        # --- 🎨 强制显示漂亮的红色滑块 ---
+        # --- 防崩溃选择器 ---
         if len(available_years) > 1:
             chosen_year = st.select_slider(
                 "Select Year", 
@@ -121,13 +126,10 @@ if st.session_state.app_mode == 'Welcome':
                 label_visibility="collapsed"
             )
         else:
-            chosen_year = st.select_slider(
-                "Select Year",
-                options=available_years,
-                value=available_years[0],
-                label_visibility="collapsed"
-            )
-        
+            chosen_year = st.selectbox("Select Year", options=available_years, label_visibility="collapsed")
+            if scan_failed:
+                st.warning("⚠️ No data files found. Please check Debug Mode below.")
+
         st.markdown("<br>", unsafe_allow_html=True)
         
         if st.button(f"🚀 Launch Dashboard ({chosen_year})", type="primary", use_container_width=True):
@@ -137,26 +139,35 @@ if st.session_state.app_mode == 'Welcome':
 
     st.markdown("<br><br><p style='text-align: center; color: #9ca3af;'>© Team 22 | Powered by Streamlit</p>", unsafe_allow_html=True)
 
+    # --- 🕵️‍♂️ 调试信息 (如果还找不到，点开这个截图给我) ---
+    with st.expander("🕵️‍♂️ Debug Info (Click if data not found)"):
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        st.write(f"**App.py is located at:** `{current_dir}`")
+        
+        target_dir = os.path.join(current_dir, "split_data_by_year")
+        st.write(f"**Looking for data in:** `{target_dir}`")
+        
+        if os.path.exists(target_dir):
+            st.success(f"✅ Folder 'split_data_by_year' exists! Files inside: {os.listdir(target_dir)}")
+        else:
+            st.error(f"❌ Folder 'split_data_by_year' NOT found at that path. Files in app directory: {os.listdir(current_dir)}")
+
 # ==========================================
 # 📊 场景 B: 主仪表盘 (Dashboard)
 # ==========================================
 elif st.session_state.app_mode == 'Dashboard':
     year = st.session_state.selected_year
     
-    # ✅ 正确逻辑 1: 先加载数据
     df = load_data(year)
     
-    # ✅ 正确逻辑 2: 拿到 df 后，立刻检查它是不是空的
     if df is None or df.empty:
         st.error(f"❌ 无法加载 {year} 年的数据。")
-        st.info("💡 请检查 GitHub 仓库中是否上传了对应的 .zip 文件，且文件名正确 (chicago_crime_YYYY.csv.zip)。")
+        st.info("💡 请展开首页底部的 Debug Info 查看具体路径问题。")
         if st.button("← 返回首页"):
             st.session_state.app_mode = 'Welcome'
             st.rerun()
-        st.stop() # 停止运行
+        st.stop()
 
-    # ✅ 正确逻辑 3: 数据没问题了，才开始渲染页面
-    # --- 侧边栏 ---
     with st.sidebar:
         if st.button("← Back to Home"):
             st.session_state.app_mode = 'Welcome'
@@ -173,14 +184,12 @@ elif st.session_state.app_mode == 'Dashboard':
         sel_districts = st.multiselect("Police District (Optional)", districts, default=[])
         arrest = st.radio("Arrest Status", ["All", "Yes", "No"], horizontal=True)
 
-    # --- 过滤数据 ---
     mask = df['Primary Type'].isin(sel_types)
     if sel_districts: mask = mask & (df['District'].isin(sel_districts))
     if arrest == "Yes": mask = mask & (df['Arrest'] == True)
     if arrest == "No": mask = mask & (df['Arrest'] == False)
     filtered_df = df[mask]
 
-    # --- 页面主内容 ---
     st.title(f"Chicago Crime Intelligence: {year}")
     
     def metric_card(title, value, sub, color):
@@ -235,7 +244,6 @@ elif st.session_state.app_mode == 'Dashboard':
             top.columns=['Type','Count']
             st.plotly_chart(px.bar(top, x='Count', y='Type', orientation='h', color='Count').update_layout(height=250, margin=dict(l=0,r=0,t=0,b=0), showlegend=False), use_container_width=True)
             
-    # --- Heatmap (回归) ---
     st.markdown("---")
     st.subheader("🗓️ Temporal Heatmap")
     if not filtered_df.empty:
