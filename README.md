@@ -47,11 +47,11 @@ Features include:
 - Crime-type filtering
 - Map-based visualization of incidents or hotspots
 
-**Live Demo (if deployed):**  
-[Dashboard Link Here]
+**Live Demo:**  
+https://team22it5006predictivepolicingay2526sem2-5xjmr8cwbappeurrspssw.streamlit.app/
 
 ## Demo Video
-A short walkthrough of the dashboard and EDA findings:  
+A short walkthrough of the dashboard:  
 [Demo Video Link Here]
 
 ---
