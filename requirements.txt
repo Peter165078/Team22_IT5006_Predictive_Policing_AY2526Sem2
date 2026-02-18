@@ -2,3 +2,10 @@ streamlit
 pandas
 plotly
 pydeck
+
+
+seaborn==0.13.2
+pandas==2.3.3
+ipykernel==7.2.0
+folium==0.20.0
+geopandas==1.1.2

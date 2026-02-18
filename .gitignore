@@ -205,3 +205,7 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+
+
+data/built_for_eda/standard_data.csv
+data/raw/Crimes_-_2001_to_Present_20260216.csv

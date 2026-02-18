@@ -13,31 +13,8 @@ This project is developed as part of the IT5006 course and is organized into thr
 
 Phase 1 focuses on understanding crime data, identifying temporal and spatial patterns, and building an interactive dashboard to communicate insights.
 
-## Key Outcomes
-- Literature review on predictive policing methods and evaluation metrics
-- Data cleaning and preprocessing pipeline
-- Exploratory Data Analysis (EDA) on:
-  - Temporal patterns (hourly, daily, monthly trends)
-  - Spatial patterns (hotspots and geographic distribution)
-- Interactive dashboard for exploring crime patterns
-- Phase 1 written report submission
-
 ## EDA Results
-### Temporal Patterns
-![Temporal Analysis](artifacts/figures/temporal_example.png)
-
-Example insights:
-- Crime frequency varies significantly by hour of day
-- Certain crime types show strong weekly patterns
-- Seasonal variations are observable across months
-
-### Spatial Patterns
-![Spatial Analysis](artifacts/figures/spatial_example.png)
-
-Example insights:
-- Crime hotspots cluster in specific districts
-- Different crime types exhibit different spatial behaviors
-- Hotspot analysis can support resource allocation decisions
+![overview](https://cdn.jsdelivr.net/gh/JIaDLu/BlogImg@main/img/overview_grid.png)
 
 ## Dashboard Demo
 Interactive dashboard built for exploring crime data.
@@ -52,7 +29,7 @@ https://team22it5006predictivepolicingay2526sem2-5xjmr8cwbappeurrspssw.streamlit
 
 ## Demo Video
 A short walkthrough of the dashboard:  
-[Demo Video Link Here]
+![dashboard_preview](https://cdn.jsdelivr.net/gh/JIaDLu/BlogImg@main/img/dashboard_preview_out.gif)
 
 ---
 
@@ -69,29 +46,61 @@ In development.
 # Reproduce Our Results
 
 ## Installation (Project Setup)
-This project uses **uv** for dependency and environment management.
 
-### 1. Install uv
-If you do not have uv installed:  
-```bash
-pip install uv
-```
-Or follow official instructions:  
-[https://github.com/astral-sh/uv](https://github.com/astral-sh/uv)
+This project supports both **uv** and **conda** for dependency and environment management, and uses **Python 3.10**.
 
-### 2. Clone Repository
-```bash
-git clone <your-repo-url>
-cd <repo-name>
-```
+### Option 1: Using `uv`
 
-### 3. Sync Environment
-Create and sync the virtual environment:  
-```bash
-uv sync
-```
-This will install all dependencies from `pyproject.toml` and `uv.lock`.
+If you are using `uv`, follow these steps:
 
+1. Clone the repository:
+
+   ```bash
+   git clone <your-repo-url>
+   cd <repo-name>
+   ```
+
+2. Create and activate the virtual environment with Python 3.10:
+
+   ```bash
+   uv venv -p 3.10
+   source .venv/bin/activate
+   ```
+
+3. Install the required dependencies:
+
+   ```bash
+   uv pip install -r requirements.txt
+   ```
+
+### Option 2: Using `conda`
+
+If you prefer using `conda`, you can set up the environment using the following steps:
+
+1. Clone the repository:
+
+   ```bash
+   git clone <your-repo-url>
+   cd <repo-name>
+   ```
+
+2. Create a new `conda` environment with Python 3.10:
+
+   ```bash
+   conda create --name <env-name> python=3.10
+   ```
+
+3. Activate the `conda` environment:
+
+   ```bash
+   conda activate <env-name>
+   ```
+
+4. Install the required dependencies:
+
+   ```bash
+   pip install -r requirements.txt
+   ```
 ---
 
 # Data Source 📊
@@ -112,14 +121,14 @@ About the data:
 
 ## Where to Place the File
 After downloading:  
-- Rename if needed (e.g., `chicago_crimes.csv`)  
+- Rename if needed (e.g., `Crimes_-_2001_to_Present_20260216.csv`)  
 - Place it under:  
   ```
   data/raw/
   ```
   Example:  
   ```
-  data/raw/chicago_crimes.csv
+  data/raw/Crimes_-_2001_to_Present_20260216.csv
   ```
 
 > Note: The repository does not include raw data due to file size.
@@ -127,33 +136,20 @@ After downloading:
 ---
 
 # Phase 1 Quick Start
-Phase 1 focuses on:  
-- Literature review  
-- Exploratory Data Analysis (EDA)  
-- Interactive dashboard  
 
-Steps:  
-1. Download dataset  
-2. Place it in the correct folder  
-3. Run notebooks  
-4. Launch dashboard  
-
-
-# Run EDA Notebooks
-Start Jupyter:  
-```bash
-jupyter notebook
-```
+## Run EDA Notebooks
 
 Open and run in order:  
 1. `notebooks/01_eda_overview.ipynb`  
-2. `notebooks/02_eda_time_patterns.ipynb`  
-3. `notebooks/03_eda_spatial_patterns.ipynb`  
+2. `notebooks/02_build_standard_data.ipynb`  
+3. `notebooks/03_eda_pipeline.ipynb`  
+4. `notebooks/04_results_overview.ipynb`  
 
 Generated figures will be saved to:  
 ```
 artifacts/
 └── figures/
+└── overview_grid.png
 ```
 
 ---
@@ -173,7 +169,7 @@ http://localhost:8501
 
 ---
 
-# Repository Structure
+# Repository Structure (Still Designing & Developing)
 
 ### `apps/`
 User-facing applications (demo/UI layer).  
