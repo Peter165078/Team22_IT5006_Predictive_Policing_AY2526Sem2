@@ -519,57 +519,149 @@ class DataProcessor:
         self, df: pd.DataFrame, is_train: bool, fd: Dict
     ) -> Tuple[pd.DataFrame, Dict]:
         """
-        Process District, Ward, Community Area, Beat, Latitude, Longitude,
-        X/Y Coordinates.
+        Per-column spatial numeric processing with domain-knowledge hard bounds.
 
-        - District / Ward / Community Area are treated as ordinal administrative
-          zones.  Missing values filled with median (train) then indicator added.
-        - Beat is a police patrol sub-zone (numeric ID); treated numerically.
-        - Latitude / Longitude: outlier-clamp then keep as-is (the scaler
-          handles normalisation later).  Also added: grid_cell_lat_bin and
-          grid_cell_lon_bin for spatial density binning.
-        - X/Y Coordinate: Chicago local coordinate reference system;
-          kept alongside lat/lon for models that benefit from Euclidean distance.
+        Each column has its own outlier strategy based on its known valid range:
 
-        Outlier treatment: IQR-based Winsorisation at 1st–99th percentile.
-        Missing indicator added when missing rate > MISSING_IND_THRESH.
+        District (1–31)
+        ---------------
+        Administrative police district ID.  Values outside [1, 31] are data
+        entry errors → hard-clip, not IQR.  Treated as integer category kept
+        as numeric for tree/linear models.  Missing → mode (most common district
+        in train), plus missing indicator (Chicago has a small but consistent
+        fraction of un-geocoded records).
+
+        Ward (1–50)
+        -----------
+        City council ward.  Hard valid range [1, 50].  Same treatment as
+        District.  Missing → mode.
+
+        Community Area (1–77)
+        ---------------------
+        Chicago's 77 official community areas.  Hard clip to [1, 77].
+        Missing → mode.  Community area is a stronger spatial signal than ward
+        for crime patterns (stable neighbourhoods).
+
+        Beat (111–2535)
+        ---------------
+        Police patrol beat — finest administrative granularity.  The range
+        [111, 2535] is the documented Chicago PD beat numbering system.
+        Values outside this range are coercion errors → hard-clip.
+        Beats have large numeric gaps by design (districts prefix the beat number),
+        so raw numeric value is informative; kept as-is after clipping.
+        Missing → median beat within the same district (if available), else
+        global median.
+
+        Latitude (36–42)
+        ----------------
+        Chicago metro area spans roughly 41.6–42.1°N.  The broader [36, 42]
+        bound is a generous Chicago-state envelope; anything outside is clearly
+        erroneous (e.g. (0, 0) sentinel values).  Clip, then fill missing with
+        district-level median lat from train.
+
+        Longitude (-92 to -88)
+        ----------------------
+        Chicago metro spans roughly -87.9 to -87.5°W.  Hard clip [-92, -88].
+        Same fill strategy as Latitude.
+
+        X Coordinate (0–1,205,119)  /  Y Coordinate (0–1,951,622)
+        -----------------------------------------------------------
+        Illinois State Plane East projection (feet).  Values of exactly 0
+        indicate missing geocoding (sentinel zero) → treat 0 as NaN.
+        Hard clip to documented ranges after zero-masking.
+        Fill missing with district-level median from train.
         """
-        spatial_num_cols = [
-            "District", "Ward", "Community Area", "Beat",
-            "Latitude", "Longitude", "X Coordinate", "Y Coordinate",
-        ]
 
-        for col in spatial_num_cols:
+        # ── Domain hard bounds: (lower_valid, upper_valid) ───────────────────
+        HARD_BOUNDS: Dict[str, Tuple[float, float]] = {
+            "District":      (1.0,  31.0),
+            "Ward":          (1.0,  50.0),
+            "Community Area":(1.0,  77.0),
+            "Beat":          (111.0, 2535.0),
+            "Latitude":      (36.0,  42.0),
+            "Longitude":     (-92.0, -88.0),
+            "X Coordinate":  (1.0,   1_205_119.0),   # 0 = sentinel missing
+            "Y Coordinate":  (1.0,   1_951_622.0),   # 0 = sentinel missing
+        }
+
+        # ── Columns where 0 is a sentinel for "no geocode" ───────────────────
+        SENTINEL_ZERO_COLS = {"X Coordinate", "Y Coordinate"}
+
+        # ── Columns where mode is preferred over median ───────────────────────
+        # (integer IDs with a dominant value; median can land between integers)
+        MODE_FILL_COLS = {"District", "Ward", "Community Area"}
+
+        # ── Step 0: sentinel zero → NaN ──────────────────────────────────────
+        for col in SENTINEL_ZERO_COLS:
+            if col in df.columns:
+                df[col] = df[col].replace(0.0, np.nan)
+
+        # ── Step 1: per-column processing ────────────────────────────────────
+        for col, (lo_hard, hi_hard) in HARD_BOUNDS.items():
             if col not in df.columns:
                 continue
 
             missing_rate = df[col].isna().mean()
 
+            # Hard-clip values outside the valid domain before any statistics
+            df[col] = df[col].clip(lo_hard, hi_hard)
+
             if is_train:
-                # Winsorise using train percentiles
-                lo = df[col].quantile(0.01)
-                hi = df[col].quantile(0.99)
-                med = df[col].median()
-                fd[f"winsor_{col}"] = (lo, hi)
-                fd[f"median_{col}"] = med
+                if col in MODE_FILL_COLS:
+                    fill_val = float(df[col].mode().iloc[0])
+                else:
+                    fill_val = float(df[col].median())
+                fd[f"fill_{col}"]         = fill_val
                 fd[f"missing_rate_{col}"] = missing_rate
             else:
-                lo, hi = fd.get(f"winsor_{col}", (None, None))
-                med    = fd.get(f"median_{col}", df[col].median())
+                fill_val = fd.get(f"fill_{col}", float(df[col].median()))
 
-            # Add missing indicator if needed
-            if fd.get(f"missing_rate_{col}", missing_rate) > MISSING_IND_THRESH:
-                df[f"{col}_missing"] = df[col].isna().astype(int)
+            # Always add missing indicator (spatial missingness is informative)
+            df[f"{col}_missing"] = df[col].isna().astype(int)
 
-            # Winsorise, then fill missing with median
-            if lo is not None:
-                df[col] = df[col].clip(lo, hi)
-            df[col] = df[col].fillna(med)
+            df[col] = df[col].fillna(fill_val)
 
-        # ── Grid cell features for spatial density lookup ────────────────────
+        # ── Step 2: Beat — district-aware median fill ─────────────────────────
+        # Override the global median fill for Beat with per-district median
+        # (beats are district-prefixed; a district-level median is far more
+        # representative than the global median of 1,000+ beats).
+        if "Beat" in df.columns and "District" in df.columns:
+            beat_missing_mask = df["Beat_missing"] == 1   # created above
+            if beat_missing_mask.any():
+                if is_train:
+                    dist_beat_median = df.groupby("District")["Beat"].median()
+                    fd["dist_beat_median"] = dist_beat_median.to_dict()
+                dist_beat = fd.get("dist_beat_median", {})
+                global_beat_fill = fd.get("fill_Beat",
+                                          float(df["Beat"].median()))
+                df.loc[beat_missing_mask, "Beat"] = (
+                    df.loc[beat_missing_mask, "District"]
+                    .map(dist_beat)
+                    .fillna(global_beat_fill)
+                )
+
+        # ── Step 3: Lat/Lon — district-aware median fill ─────────────────────
+        for coord_col, dist_key in [("Latitude", "dist_lat_median"),
+                                    ("Longitude", "dist_lon_median")]:
+            if coord_col not in df.columns or "District" not in df.columns:
+                continue
+            coord_missing = df[f"{coord_col}_missing"] == 1
+            if coord_missing.any():
+                if is_train:
+                    dist_med = df.groupby("District")[coord_col].median()
+                    fd[dist_key] = dist_med.to_dict()
+                dist_map   = fd.get(dist_key, {})
+                global_fill = fd.get(f"fill_{coord_col}",
+                                     float(df[coord_col].median()))
+                df.loc[coord_missing, coord_col] = (
+                    df.loc[coord_missing, "District"]
+                    .map(dist_map)
+                    .fillna(global_fill)
+                )
+
+        # ── Step 4: Grid cell features for spatial density lookup ─────────────
         if "Latitude" in df.columns and "Longitude" in df.columns:
-            df["grid_cell"] = _build_grid_cell(df["Latitude"], df["Longitude"])
-            # Encode as two integer bin indices for numeric models
+            df["grid_cell"]    = _build_grid_cell(df["Latitude"], df["Longitude"])
             df["grid_lat_bin"] = (df["Latitude"]  / GRID_CELL_DEG).astype(int)
             df["grid_lon_bin"] = (df["Longitude"] / GRID_CELL_DEG).astype(int)
 
@@ -649,7 +741,7 @@ class DataProcessor:
         self, df: pd.DataFrame, is_train: bool, fd: Dict
     ) -> Tuple[pd.DataFrame, Dict]:
         """
-        Primary Type: high-level crime category (35 types in MIMIC data).
+        Primary Type: high-level crime category.
 
         Top-30 types are kept; the long tail and "NO_CRIME" (negatives) are
         handled naturally via the generic encoder's OTHER bucket.
@@ -702,55 +794,62 @@ class DataProcessor:
         self, df: pd.DataFrame, is_train: bool, fd: Dict
     ) -> Tuple[pd.DataFrame, Dict]:
         """
-        Compute rolling historical crime counts and spatial density features.
+        Compute rolling historical crime counts and spatial density features,
+        each paired with a data-availability indicator column.
 
-        Features
-        --------
-        crimes_last_7d    : crime count in the same district in the past 7 days
-        crimes_last_30d   : … past 30 days
-        crimes_last_90d   : … past 90 days
-        crime_density_500m: crime count in the same ≈500 m grid cell, past 30 days
+        Features produced (per window W ∈ {7d, 30d, 90d})
+        ---------------------------------------------------
+        crimes_last_{W}           : crime count in the same district, past W days
+        crimes_last_{W}_has_data  : 1 if the lookup table contained at least one
+                                    day of data in the window; 0 if no history
+                                    was available (e.g. very first days in the
+                                    dataset).  When has_data = 0, the count
+                                    column is set to 0 — NOT as a legitimate
+                                    "zero crimes" signal but as a placeholder.
+                                    Downstream models should use the indicator
+                                    to distinguish the two cases.
+
+        crime_density_500m        : crime count in the same ≈500 m grid cell,
+                                    past 30 days
+        crime_density_500m_has_data : same availability indicator
 
         Leakage prevention
         ------------------
-        All lookups are STRICTLY backward-looking: for a sample with timestamp T
-        we count only events with timestamp < T.
+        Lookups are STRICTLY backward-looking (only dates < query date).
 
-        On train: build a district-level daily aggregation table from train data
-                  and store it in fd["hist_district_daily"] and
-                  fd["hist_grid_daily"].  This table is used for val/test lookup.
+        On train : build district-level and grid-cell-level daily aggregation
+                   tables from the training rows; store in fd.
+        On val/test : use the frozen train-period tables.  Records whose query
+                   date falls before the earliest train date will have
+                   has_data = 0.
 
-        On val/test: use the frozen train-period table.  This means val/test
-                     samples see train-era historical rates, which is a
-                     conservative (slightly pessimistic) estimate but prevents
-                     future leakage.  In production, the table would be updated
-                     daily with new incoming data.
-
-        Implementation note
-        -------------------
-        We use a pre-aggregated daily count table + cumulative sum lookup rather
-        than a rolling merge on 8 M rows, which would be prohibitively slow.
+        Implementation
+        --------------
+        Pre-aggregated daily count table + per-group cumulative sum enables
+        O(1) per-row lookup, making the 8 M-row dataset tractable.
         """
-        # We need the date column in df at this point (dropped last)
         if DATE_COL not in df.columns:
-            # If somehow dropped already, add dummy columns
             for w in HIST_WINDOWS:
-                df[f"crimes_last_{w}"] = 0
-            df["crime_density_500m"] = 0
+                df[f"crimes_last_{w}"]          = 0
+                df[f"crimes_last_{w}_has_data"]  = 0
+            df["crime_density_500m"]          = 0
+            df["crime_density_500m_has_data"] = 0
             return df, fd
 
-        dates      = pd.to_datetime(df[DATE_COL])
-        # Use District as available; fall back to grid cell
-        districts  = df["District"].fillna(-1).astype(int).astype(str) \
-                     if "District" in df.columns \
-                     else pd.Series(["UNKNOWN"] * len(df), index=df.index)
-        grid_cells = df["grid_cell"] \
-                     if "grid_cell" in df.columns \
-                     else pd.Series(["UNKNOWN"] * len(df), index=df.index)
+        dates     = pd.to_datetime(df[DATE_COL])
+        districts = (
+            df["District"].fillna(-1).astype(int).astype(str)
+            if "District" in df.columns
+            else pd.Series(["UNKNOWN"] * len(df), index=df.index)
+        )
+        grid_cells = (
+            df["grid_cell"]
+            if "grid_cell" in df.columns
+            else pd.Series(["UNKNOWN"] * len(df), index=df.index)
+        )
 
-        # ── Build / retrieve lookup tables ────────────────────────────────────
+        # ── Build or retrieve lookup tables ───────────────────────────────────
         if is_train:
-            # District-level daily counts
             dist_daily = (
                 df.assign(_date=dates.dt.normalize(), _district=districts)
                 .groupby(["_district", "_date"])
@@ -759,7 +858,6 @@ class DataProcessor:
             )
             fd["hist_district_daily"] = dist_daily
 
-            # Grid-cell level daily counts
             grid_daily = (
                 df.assign(_date=dates.dt.normalize(), _grid=grid_cells)
                 .groupby(["_grid", "_date"])
@@ -768,19 +866,18 @@ class DataProcessor:
             )
             fd["hist_grid_daily"] = grid_daily
 
-        dist_daily = fd.get("hist_district_daily", pd.DataFrame(
-            columns=["_district", "_date", "count"]
-        ))
-        grid_daily = fd.get("hist_grid_daily", pd.DataFrame(
-            columns=["_grid", "_date", "count"]
-        ))
-
-        # ── Vectorised window lookup ───────────────────────────────────────────
-        df = self._attach_hist_features(
-            df, dates, districts, grid_cells,
-            dist_daily, grid_daily,
+        dist_daily = fd.get(
+            "hist_district_daily",
+            pd.DataFrame(columns=["_district", "_date", "count"])
+        )
+        grid_daily = fd.get(
+            "hist_grid_daily",
+            pd.DataFrame(columns=["_grid", "_date", "count"])
         )
 
+        df = self._attach_hist_features(
+            df, dates, districts, grid_cells, dist_daily, grid_daily,
+        )
         return df, fd
 
     @staticmethod
@@ -793,23 +890,23 @@ class DataProcessor:
         grid_daily: pd.DataFrame,
     ) -> pd.DataFrame:
         """
-        Attach historical count features for each row using vectorised groupby
-        on the pre-aggregated daily tables.
+        Attach historical count features + has_data indicators for each row.
 
-        For each window W (7, 30, 90 days) and each row i:
-            crimes_last_W = sum of counts in dist_daily where
-                _district == districts[i]  AND
-                date in [date_i - W days,  date_i - 1 day]
+        has_data = 1  iff the cumulative-sum series for the group contains at
+                      least one date that falls within [query_date - W, query_date - 1].
+        has_data = 0  means no training history was available for this
+                      (group, window) combination; the count is set to 0 as a
+                      neutral placeholder — not a meaningful "zero crimes".
+
+        The explicit separation of "no history" (has_data=0, count=0) from
+        "genuinely zero crimes in window" (has_data=1, count=0) prevents the
+        model from treating cold-start records as low-crime locations.
         """
-        # Build district-date → cum-sum dict for fast O(1) lookup
-        # Key: (district, date)  →  cumulative count up to that date
-        def _build_cumsum(daily: pd.DataFrame,
-                          group_col: str) -> Dict:
-            """Return dict: {group: pd.Series(cumsum, index=date)}"""
+        def _build_cumsum(daily: pd.DataFrame, group_col: str) -> Dict:
             result = {}
             for grp, sub in daily.groupby(group_col):
                 sub = sub.sort_values("_date").set_index("_date")
-                result[grp] = sub["count"].cumsum()
+                result[str(grp)] = sub["count"].cumsum()
             return result
 
         dist_cumsum = _build_cumsum(dist_daily, "_district") \
@@ -817,36 +914,62 @@ class DataProcessor:
         grid_cumsum = _build_cumsum(grid_daily, "_grid") \
                       if not grid_daily.empty else {}
 
-        def _window_count(cum: pd.Series, query_date, days: int) -> int:
+        def _window_lookup(
+            cum: Optional[pd.Series],
+            query_date,
+            days: int,
+        ) -> Tuple[int, int]:
+            """
+            Returns (count, has_data).
+
+            has_data = 1  if the cum-sum series has ANY entry within
+                          [query_date - days, query_date - 1].
+            count    = number of crimes in that window (0 if has_data=0).
+            """
             if cum is None or len(cum) == 0:
-                return 0
+                return 0, 0
+
             end   = pd.Timestamp(query_date).normalize() - pd.Timedelta(days=1)
             start = end - pd.Timedelta(days=days - 1)
             idx   = cum.index
-            # sum(end) - sum(start - 1 day)
-            val_end   = cum[cum.index <= end].iloc[-1]   if any(idx <= end)   else 0
-            val_start = cum[cum.index <  start].iloc[-1] if any(idx <  start) else 0
-            return max(0, int(val_end - val_start))
 
-        # Vectorise across rows
+            # Check if ANY historical data falls within the window
+            in_window = (idx >= start) & (idx <= end)
+            if not in_window.any():
+                return 0, 0
+
+            # Use cumsum difference to get window count
+            val_end   = cum[idx <= end].iloc[-1]   if (idx <= end).any()   else 0
+            val_start = cum[idx < start].iloc[-1]  if (idx < start).any() else 0
+            count = max(0, int(val_end - val_start))
+            return count, 1
+
         dates_arr      = dates.values
         districts_arr  = districts.values
         grid_cells_arr = grid_cells.values
 
+        # ── District-level windows ─────────────────────────────────────────────
         for window_name, days in HIST_WINDOWS.items():
-            col_name = f"crimes_last_{window_name}"
-            counts = []
+            counts    = []
+            has_datas = []
             for dt, dist in zip(dates_arr, districts_arr):
                 cum = dist_cumsum.get(str(dist))
-                counts.append(_window_count(cum, dt, days))
-            df[col_name] = counts
+                c, h = _window_lookup(cum, dt, days)
+                counts.append(c)
+                has_datas.append(h)
+            df[f"crimes_last_{window_name}"]         = counts
+            df[f"crimes_last_{window_name}_has_data"] = has_datas
 
-        # Density: grid cell, 30-day window
-        density = []
+        # ── Grid-cell density (30-day window) ─────────────────────────────────
+        density    = []
+        has_datas  = []
         for dt, grid in zip(dates_arr, grid_cells_arr):
             cum = grid_cumsum.get(str(grid))
-            density.append(_window_count(cum, dt, 30))
-        df["crime_density_500m"] = density
+            c, h = _window_lookup(cum, dt, 30)
+            density.append(c)
+            has_datas.append(h)
+        df["crime_density_500m"]          = density
+        df["crime_density_500m_has_data"] = has_datas
 
         return df
 
