@@ -64,6 +64,8 @@ DATE_COL   = "Date"
 _DROP_COLS = [
     "ID", "Case Number", "Block", "FBI Code",
     "Updated On", "Location", "Year",
+    "Primary Type", "Description", "Location Description", "IUCR",
+    "Arrest", "Domestic",
 ]
 
 RARE_THRESH       = 0.005   # categories with freq < this → "OTHER"
@@ -254,17 +256,14 @@ class DataProcessor:
             pos_df["_di"].astype(str) + "_" + pos_df["_day"].astype(str)
         )
 
-        district_coords = (
-            pos_df.groupby("_di")[["Latitude", "Longitude",
-                                    "X Coordinate", "Y Coordinate",
-                                    "Ward", "Community Area", "Beat"]]
-            .median()
-        )
-
         districts  = pos_df["_di"].values
         timestamps = pos_df["_day"].values          # sample day-level timestamps
         n_pos      = len(pos_df)
         negatives: List[Dict] = []
+        district_to_indices = {
+            district: idx.to_numpy(copy=False)
+            for district, idx in pos_df.groupby("_di").groups.items()
+        }
 
         # For small datasets use a much larger attempt multiplier
         max_attempts = max(n_neg * 100, 500_000)
@@ -290,19 +289,21 @@ class DataProcessor:
                     break
                 day_key = str(dist) + "_" + str(pd.Timestamp(dt).normalize())
                 if day_key not in crime_keys:
-                    row = district_coords.loc[dist] \
-                          if dist in district_coords.index \
-                          else district_coords.iloc[0]
+                    template_idx = district_to_indices.get(dist)
+                    if template_idx is None or len(template_idx) == 0:
+                        template_row = pos_df.iloc[rng.integers(0, n_pos)]
+                    else:
+                        template_row = pos_df.iloc[rng.choice(template_idx)]
                     negatives.append({
                         DATE_COL:               dt,
-                        "District":             float(dist) if dist != "-1" else np.nan,
-                        "Ward":                 row.get("Ward", np.nan),
-                        "Community Area":       row.get("Community Area", np.nan),
-                        "Beat":                 row.get("Beat", np.nan),
-                        "Latitude":             row.get("Latitude", np.nan),
-                        "Longitude":            row.get("Longitude", np.nan),
-                        "X Coordinate":         row.get("X Coordinate", np.nan),
-                        "Y Coordinate":         row.get("Y Coordinate", np.nan),
+                        "District":             template_row.get("District", np.nan),
+                        "Ward":                 template_row.get("Ward", np.nan),
+                        "Community Area":       template_row.get("Community Area", np.nan),
+                        "Beat":                 template_row.get("Beat", np.nan),
+                        "Latitude":             template_row.get("Latitude", np.nan),
+                        "Longitude":            template_row.get("Longitude", np.nan),
+                        "X Coordinate":         template_row.get("X Coordinate", np.nan),
+                        "Y Coordinate":         template_row.get("Y Coordinate", np.nan),
                         "Primary Type":         "NO_CRIME",
                         "Description":          "NO_CRIME",
                         "Location Description": "UNKNOWN",
@@ -402,30 +403,21 @@ class DataProcessor:
         # 2. Temporal
         df = self._process_temporal(df)
 
-        # 3. Boolean flags
-        df = self._process_boolean_flags(df)
-
-        # 4. Spatial numeric (adds grid_cell string col — dropped later)
+        # 3. Spatial numeric (adds grid_cell string col — dropped later)
         df, fd = self._process_spatial_numeric(df, is_train, fd)
 
-        # 5. Categorical → one-hot
-        df, fd = self._process_primary_type(df, is_train, fd)
-        df, fd = self._process_location_desc(df, is_train, fd)
-        df, fd = self._process_iucr(df, is_train, fd)
-        df, fd = self._process_description(df, is_train, fd)
-
-        # 6. Historical features (uses full-dataset tables; drops cold rows)
+        # 4. Historical features (uses full-dataset tables; drops cold rows)
         df, surviving_mask = self._process_historical(df)
 
-        # 7. Scale numeric columns (fit on surviving train rows only)
+        # 5. Scale numeric columns (fit on surviving train rows only)
         df, fd = self._scale_numerics(df, is_train, fd)
 
-        # 8. Drop all remaining object / string columns (grid_cell etc.)
+        # 6. Drop all remaining object / string columns (grid_cell etc.)
         obj_cols = df.select_dtypes(include=["object"]).columns.tolist()
         if obj_cols:
             df = df.drop(columns=obj_cols)
 
-        # 9. Drop residual date column
+        # 7. Drop residual date column
         df = df.drop(columns=[DATE_COL], errors="ignore")
 
         # Paranoia check: ensure everything is numeric
@@ -448,6 +440,10 @@ class DataProcessor:
         Updated On        → admin metadata, not available at crime time
         Location (string) → duplicate of lat/lon
         Year              → redundant with Date
+        Primary Type / Description / IUCR / Arrest / Domestic
+                          → only known after an incident has occurred,
+                            so they leak the binary target for occurrence
+                            prediction
         """
         return df.drop(columns=[c for c in _DROP_COLS if c in df.columns])
 

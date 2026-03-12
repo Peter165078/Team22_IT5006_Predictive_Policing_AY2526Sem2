@@ -1,0 +1,39 @@
+{
+  "output_path": "/Users/jiahaojing/Documents/Playground/Team22_IT5006_Predictive_Policing_AY2526Sem2/data/raw/chicago_crime_2022_2024_phase2.csv",
+  "years": [
+    2022,
+    2023,
+    2024
+  ],
+  "rows_by_year": {
+    "2022": 20000,
+    "2023": 20000,
+    "2024": 20000
+  },
+  "total_rows": 60000,
+  "sampled_rows_per_year": 20000,
+  "columns": [
+    "ID",
+    "Case Number",
+    "Date",
+    "Block",
+    "IUCR",
+    "Primary Type",
+    "Description",
+    "Location Description",
+    "Arrest",
+    "Domestic",
+    "Beat",
+    "District",
+    "Ward",
+    "Community Area",
+    "FBI Code",
+    "X Coordinate",
+    "Y Coordinate",
+    "Year",
+    "Updated On",
+    "Latitude",
+    "Longitude",
+    "Location"
+  ]
+}

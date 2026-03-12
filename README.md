@@ -34,7 +34,12 @@ A short walkthrough of the dashboard:
 ---
 
 # Phase 2 🛠️
-In development.
+
+Phase 2 now includes a reproducible pipeline for:
+- building a single training CSV from yearly Chicago archives
+- applying the shared preprocessing and feature engineering pipeline
+- training multiple models for Milestone 2
+- saving model files, prediction outputs, and metric summaries under `artifacts/`
 
 ---
 
@@ -165,6 +170,42 @@ streamlit run apps/dashboard/app.py
 Then open the local URL shown in the terminal (typically):  
 ```
 http://localhost:8501
+```
+
+---
+
+# Phase 2 Quick Start
+
+## 1. Build the local Phase 2 dataset
+
+```bash
+python src/scripts/prepare_phase2_data.py --start-year 2022 --end-year 2024 --overwrite
+```
+
+This reads the yearly ZIP archives from `apps/dashboard/split_data_by_year/` and writes a consolidated CSV to `data/raw/`.
+
+## 2. Train multiple models
+
+```bash
+python src/scripts/train.py --start-year 2022 --end-year 2024
+```
+
+Generated outputs will be saved to:
+
+```text
+artifacts/
+├── metrics/
+│   ├── phase2_data_summary.json
+│   ├── phase2_model_metrics.csv
+│   ├── phase2_model_trials.csv
+│   └── predictions/
+└── models/
+```
+
+Additional write-up notes for the Milestone 2 report are in:
+
+```text
+docs/phase2_methodology.md
 ```
 
 ---

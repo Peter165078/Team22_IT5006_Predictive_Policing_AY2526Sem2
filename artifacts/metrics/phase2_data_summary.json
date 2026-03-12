@@ -1,0 +1,20 @@
+{
+  "data_path": "data/raw/chicago_crime_2022_2024_phase2.csv",
+  "raw_rows_after_negative_sampling": 120000,
+  "positive_rows": 60000,
+  "negative_rows": 60000,
+  "overall_positive_rate": 0.5,
+  "active_historical_windows": [
+    "7d",
+    "14d",
+    "30d",
+    "90d"
+  ],
+  "feature_count": 37,
+  "train_rows": 83820,
+  "val_rows": 17999,
+  "test_rows": 17999,
+  "train_positive_rate": 0.5010498687664042,
+  "val_positive_rate": 0.4947497083171287,
+  "test_positive_rate": 0.500638924384688
+}
