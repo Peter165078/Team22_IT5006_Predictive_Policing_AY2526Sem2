@@ -1,0 +1,78 @@
+{
+  "best_model": "hist_gradient_boosting",
+  "scoring_method": "permutation importance with average_precision on test split",
+  "top_features": [
+    {
+      "feature": "hour_sin",
+      "importance": 0.049623032453801105,
+      "importance_std": 9.794599166308329e-05
+    },
+    {
+      "feature": "hour",
+      "importance": 0.030685583424238373,
+      "importance_std": 0.0009403480410807087
+    },
+    {
+      "feature": "day_of_week",
+      "importance": 0.0016821059267421834,
+      "importance_std": 0.0003355379156683133
+    },
+    {
+      "feature": "dow_sin",
+      "importance": 0.0012451391352502172,
+      "importance_std": 0.00042930275664107375
+    },
+    {
+      "feature": "X Coordinate",
+      "importance": -0.0009791508144801231,
+      "importance_std": 0.00031180178102588265
+    },
+    {
+      "feature": "crimes_last_30d",
+      "importance": 0.0008031154478777447,
+      "importance_std": 0.0
+    },
+    {
+      "feature": "Y Coordinate",
+      "importance": -0.0006379363293621543,
+      "importance_std": 0.0007711645036589728
+    },
+    {
+      "feature": "Community Area",
+      "importance": -0.0004960246004383828,
+      "importance_std": 0.00035495604386964676
+    },
+    {
+      "feature": "Beat",
+      "importance": 0.0004920648477025225,
+      "importance_std": 0.002636419381091523
+    },
+    {
+      "feature": "Latitude",
+      "importance": -0.0004483658424098813,
+      "importance_std": 0.0006450318064281493
+    }
+  ],
+  "feature_groups": [
+    {
+      "feature_group": "temporal",
+      "importance_abs": 0.08419774534801434,
+      "importance_share": 0.9426621884808076
+    },
+    {
+      "feature_group": "spatial",
+      "importance_abs": 0.0036479852994188767,
+      "importance_share": 0.04084216022272752
+    },
+    {
+      "feature_group": "historical",
+      "importance_abs": 0.0012114875023502946,
+      "importance_share": 0.013563587190635015
+    },
+    {
+      "feature_group": "missing_indicator",
+      "importance_abs": 0.0002618893490621277,
+      "importance_share": 0.0029320641058299016
+    }
+  ]
+}

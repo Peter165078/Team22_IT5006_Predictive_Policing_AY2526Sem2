@@ -1,0 +1,5 @@
+feature_group,importance_abs,importance_share,model
+temporal,0.08419774534801434,0.9426621884808076,hist_gradient_boosting
+spatial,0.0036479852994188767,0.04084216022272752,hist_gradient_boosting
+historical,0.0012114875023502946,0.013563587190635015,hist_gradient_boosting
+missing_indicator,0.0002618893490621277,0.0029320641058299016,hist_gradient_boosting
