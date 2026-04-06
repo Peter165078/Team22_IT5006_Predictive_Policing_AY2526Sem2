@@ -115,6 +115,7 @@ def main() -> None:
     feature_names = X_test.columns.tolist()
 
     logistic_model = load_pickle(MODELS_DIR / "logistic_regression.pkl")
+    decision_tree_model = load_pickle(MODELS_DIR / "decision_tree.pkl")
     random_forest_model = load_pickle(MODELS_DIR / "random_forest.pkl")
     hist_gb_model = load_pickle(MODELS_DIR / "hist_gradient_boosting.pkl")
 
@@ -122,6 +123,11 @@ def main() -> None:
         feature_names,
         np.abs(logistic_model.coef_[0]),
         "logistic_regression",
+    )
+    decision_tree_df = build_importance_df(
+        feature_names,
+        decision_tree_model.feature_importances_,
+        "decision_tree",
     )
     random_forest_df = build_importance_df(
         feature_names,
@@ -147,6 +153,7 @@ def main() -> None:
 
     outputs = {
         "logistic_regression": logistic_df,
+        "decision_tree": decision_tree_df,
         "random_forest": random_forest_df,
         "hist_gradient_boosting": hist_gb_df,
     }

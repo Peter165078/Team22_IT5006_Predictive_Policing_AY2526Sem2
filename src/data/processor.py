@@ -13,8 +13,10 @@ Key design decisions
 --------------------
 1. Negative sample construction
    Raw data contains only reported crimes (all positive).  Negatives are
-   synthesised by sampling (district, timestamp) combinations that do NOT
-   appear in the positive set.
+   synthesised only to make binary supervision possible by sampling
+   (district, timestamp) combinations that do NOT appear in the positive set.
+   Residual class-imbalance handling is done separately by model weighting
+   (`class_weight` / weighted sampling), not by duplicating positives.
 
 2. Chronological split  — no data leakage
    Records sorted by date; split 70 / 15 / 15 chronologically.
@@ -239,6 +241,12 @@ class DataProcessor:
         This still avoids fabricating negatives on days/districts with real
         crime events while dramatically reducing rejection rate.
 
+        Spatial context is borrowed from a same-district template row, while
+        the timestamp is generated on a non-collision day with a broad spread
+        over the 24-hour clock. This keeps the negative examples geographically
+        plausible without copying an entire positive record, but it remains a
+        modeling approximation and is explicitly treated as such in the report.
+
         If the budget is exhausted before reaching n_neg, a warning is printed
         and the available negatives are used (slightly imbalanced but workable).
         """
@@ -278,7 +286,9 @@ class DataProcessor:
             s_di    = districts[idx_d]
             s_days  = pd.to_datetime(timestamps[idx_t])
 
-            # Add random hour + minute so samples span all times of day
+            # Sample broad clock times so negatives do not inherit a single
+            # copied event timestamp, while still remaining within a realistic
+            # 24-hour range.
             rand_hours   = rng.integers(0, 24, size=batch)
             rand_minutes = rng.integers(0, 60, size=batch)
             s_dt = s_days + pd.to_timedelta(rand_hours, unit="h") \

@@ -33,6 +33,7 @@ from sklearn.metrics import (
     recall_score,
     roc_auc_score,
 )
+from sklearn.tree import DecisionTreeClassifier
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(PROJECT_ROOT))
@@ -74,6 +75,10 @@ SKLEARN_MODEL_GRIDS: dict[str, list[dict]] = {
     "logistic_regression": [
         {"C": 0.5, "max_iter": 400},
         {"C": 1.0, "max_iter": 600},
+    ],
+    "decision_tree": [
+        {"max_depth": 10, "min_samples_leaf": 50, "ccp_alpha": 0.0},
+        {"max_depth": 14, "min_samples_leaf": 25, "ccp_alpha": 0.0005},
     ],
     "random_forest": [
         {
@@ -150,7 +155,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--max-rows-per-year",
         type=int,
-        default=75000,
+        default=20000,
         help="Cap per year to keep local runs practical. Use 0 for full-year data.",
     )
     parser.add_argument(
@@ -169,12 +174,13 @@ def parse_args() -> argparse.Namespace:
         nargs="+",
         default=[
             "logistic_regression",
+            "decision_tree",
             "random_forest",
             "hist_gradient_boosting",
-            "crime_mlp",
         ],
         choices=[
             "logistic_regression",
+            "decision_tree",
             "random_forest",
             "hist_gradient_boosting",
             "crime_mlp",
@@ -292,6 +298,12 @@ def build_sklearn_model(model_name: str, params: dict) -> object:
         return RandomForestClassifier(
             n_jobs=-1,
             class_weight="balanced_subsample",
+            random_state=RANDOM_STATE,
+            **params,
+        )
+    if model_name == "decision_tree":
+        return DecisionTreeClassifier(
+            class_weight="balanced",
             random_state=RANDOM_STATE,
             **params,
         )

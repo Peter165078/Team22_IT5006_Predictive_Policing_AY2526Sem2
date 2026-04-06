@@ -36,7 +36,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--max-rows-per-year",
         type=int,
-        default=75000,
+        default=20000,
         help="Optional cap per year for faster local iteration.",
     )
     parser.add_argument(

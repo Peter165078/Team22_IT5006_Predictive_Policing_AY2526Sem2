@@ -7,6 +7,7 @@ This note strengthens the `Feature Importance Analysis` section with concrete ar
 Different models expose different forms of feature importance, so the analysis used the following approach:
 
 - **Logistic Regression**: absolute coefficient magnitude
+- **Decision Tree**: built-in impurity-based feature importance
 - **Random Forest**: built-in impurity-based feature importance
 - **HistGradientBoosting**: permutation importance on the held-out test split using `average_precision` as the scoring metric
 
@@ -17,6 +18,7 @@ The saved artifacts are in:
 Main files:
 
 - `logistic_regression_feature_importance.csv`
+- `decision_tree_feature_importance.csv`
 - `random_forest_feature_importance.csv`
 - `hist_gradient_boosting_feature_importance.csv`
 - `hist_gradient_boosting_feature_groups.csv`
@@ -55,7 +57,18 @@ For tree-based and linear models, several spatial variables appear repeatedly am
 
 This indicates that location context still plays a meaningful supporting role, even though district-level spatial aggregation performance remains weaker than temporal alignment.
 
-### 3. Historical crime features contribute, but less strongly than expected in the current setup
+### 3. The Decision Tree baseline reinforces the same qualitative story
+
+The added `Decision Tree` baseline is dominated by short-term temporal variables, especially:
+
+- `hour_sin`
+- `hour_cos`
+- `hour`
+- `day_of_week`
+
+This is useful because it shows that even a simpler nonlinear model concentrates on timing signals first. In other words, the temporal dominance seen in HistGradientBoosting is not only a property of the boosted model; it is a recurring pattern across the tree-based family in this benchmark.
+
+### 4. Historical crime features contribute, but less strongly than expected in the current setup
 
 The Random Forest model ranks historical variables such as:
 
@@ -77,4 +90,5 @@ This section should still be written carefully in the final report:
 
 - feature importance depends on the model and the importance method used
 - the current benchmark uses a sampled `2022-2024` setup
+- the Decision Tree and Random Forest importances are impurity-based and should be interpreted more cautiously than held-out permutation importance
 - these findings should be presented as evidence from the current experiment, not as universal causal claims about crime behavior

@@ -46,6 +46,11 @@ Phase 2 now includes a reproducible pipeline for:
 # Phase 3 🚀
 In development.
 
+At the current stage, the codebase is stable enough to prepare for the Phase 3
+submission package. The main remaining work is repository cleanup, final report
+assembly, demo verification, and presentation materials rather than major model
+refactoring.
+
 ---
 
 # Reproduce Our Results
@@ -138,6 +143,15 @@ After downloading:
 
 > Note: The repository does not include raw data due to file size.
 
+## Repository Data Policy
+
+For GitHub submission, we distinguish between:
+
+- **demo assets kept in the repo**: yearly dashboard ZIP files under `apps/dashboard/split_data_by_year/`
+- **local training outputs not committed by default**: `data/raw/chicago_crime_2022_2024_phase2.csv`, saved model binaries under `artifacts/models/`, and prediction dumps under `artifacts/metrics/predictions/`
+
+This keeps the dashboard runnable while avoiding unnecessary training artifacts in version control.
+
 ---
 
 # Phase 1 Quick Start
@@ -172,6 +186,8 @@ Then open the local URL shown in the terminal (typically):
 http://localhost:8501
 ```
 
+The dashboard expects yearly ZIP files to exist in `apps/dashboard/split_data_by_year/`.
+
 ---
 
 # Phase 2 Quick Start
@@ -182,13 +198,23 @@ http://localhost:8501
 python src/scripts/prepare_phase2_data.py --start-year 2022 --end-year 2024 --overwrite
 ```
 
-This reads the yearly ZIP archives from `apps/dashboard/split_data_by_year/` and writes a consolidated CSV to `data/raw/`.
+This reads the yearly ZIP archives from `apps/dashboard/split_data_by_year/` and writes a consolidated CSV to `data/raw/`. By default, the Phase 2 helper script caps each year at `20,000` rows to keep local report-generation runs reproducible and practical.
 
 ## 2. Train multiple models
 
 ```bash
 python src/scripts/train.py --start-year 2022 --end-year 2024
 ```
+
+The default report-oriented benchmark trains four classical baselines: Logistic Regression, Decision Tree, Random Forest, and HistGradientBoosting. The optional PyTorch MLP remains available through `--models crime_mlp`.
+
+## 3. Export spatial-temporal evaluation summaries
+
+```bash
+python src/scripts/evaluate_phase2.py
+```
+
+This writes compact district-level and temporal-alignment metrics to `artifacts/metrics/phase2_spatiotemporal_metrics.csv`.
 
 Generated outputs will be saved to:
 

@@ -1,0 +1,66 @@
+{
+  "logistic_regression": {
+    "val": {
+      "district_correlation": -0.1443500199901178,
+      "top_5_overlap": 0.2,
+      "top_10_overlap": 0.4,
+      "hourly_correlation": 0.8646992701812477,
+      "day_of_week_correlation": -0.5294506695877169
+    },
+    "test": {
+      "district_correlation": -0.059114903983017754,
+      "top_5_overlap": 0.2,
+      "top_10_overlap": 0.5,
+      "hourly_correlation": 0.827010086418647,
+      "day_of_week_correlation": 0.20799179851860689
+    }
+  },
+  "decision_tree": {
+    "val": {
+      "district_correlation": -0.3855127913612685,
+      "top_5_overlap": 0.4,
+      "top_10_overlap": 0.3,
+      "hourly_correlation": 0.9320521368975319,
+      "day_of_week_correlation": -0.09741698153351308
+    },
+    "test": {
+      "district_correlation": 0.0002114108169407446,
+      "top_5_overlap": 0.4,
+      "top_10_overlap": 0.5,
+      "hourly_correlation": 0.9305062017557587,
+      "day_of_week_correlation": 0.17819088305310762
+    }
+  },
+  "random_forest": {
+    "val": {
+      "district_correlation": -0.12116884343590557,
+      "top_5_overlap": 0.2,
+      "top_10_overlap": 0.5,
+      "hourly_correlation": 0.968840126259665,
+      "day_of_week_correlation": -0.17775525727368177
+    },
+    "test": {
+      "district_correlation": -0.16706875863187884,
+      "top_5_overlap": 0.2,
+      "top_10_overlap": 0.3,
+      "hourly_correlation": 0.9760141522011313,
+      "day_of_week_correlation": -0.16975900278129114
+    }
+  },
+  "hist_gradient_boosting": {
+    "val": {
+      "district_correlation": -0.18580063189967413,
+      "top_5_overlap": 0.0,
+      "top_10_overlap": 0.4,
+      "hourly_correlation": 0.9738971885020741,
+      "day_of_week_correlation": -0.38447189089671985
+    },
+    "test": {
+      "district_correlation": -0.18139508638954896,
+      "top_5_overlap": 0.0,
+      "top_10_overlap": 0.2,
+      "hourly_correlation": 0.971843861344495,
+      "day_of_week_correlation": 0.5047315115930342
+    }
+  }
+}

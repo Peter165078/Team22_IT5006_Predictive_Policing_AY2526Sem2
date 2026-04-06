@@ -1,0 +1,38 @@
+feature,importance,model,importance_abs,feature_group
+hour_sin,0.6186932401547229,decision_tree,0.6186932401547229,temporal
+hour_cos,0.22615598342586413,decision_tree,0.22615598342586413,temporal
+hour,0.10670253675218466,decision_tree,0.10670253675218466,temporal
+day_of_week,0.0484482396672282,decision_tree,0.0484482396672282,temporal
+District,0.0,decision_tree,0.0,spatial
+X Coordinate_missing,0.0,decision_tree,0.0,missing_indicator
+Ward_missing,0.0,decision_tree,0.0,missing_indicator
+Community Area_missing,0.0,decision_tree,0.0,missing_indicator
+Beat_missing,0.0,decision_tree,0.0,missing_indicator
+Latitude_missing,0.0,decision_tree,0.0,missing_indicator
+Longitude_missing,0.0,decision_tree,0.0,missing_indicator
+Y Coordinate_missing,0.0,decision_tree,0.0,missing_indicator
+is_rush_hour,0.0,decision_tree,0.0,temporal
+grid_lat_bin,0.0,decision_tree,0.0,spatial
+grid_lon_bin,0.0,decision_tree,0.0,spatial
+crimes_last_7d,0.0,decision_tree,0.0,historical
+crimes_last_14d,0.0,decision_tree,0.0,historical
+crimes_last_30d,0.0,decision_tree,0.0,historical
+crimes_last_90d,0.0,decision_tree,0.0,historical
+District_missing,0.0,decision_tree,0.0,missing_indicator
+month_cos,0.0,decision_tree,0.0,temporal
+is_night,0.0,decision_tree,0.0,temporal
+is_weekend,0.0,decision_tree,0.0,temporal
+Ward,0.0,decision_tree,0.0,spatial
+month_sin,0.0,decision_tree,0.0,temporal
+dow_cos,0.0,decision_tree,0.0,temporal
+dow_sin,0.0,decision_tree,0.0,temporal
+week_of_year,0.0,decision_tree,0.0,temporal
+day_of_year,0.0,decision_tree,0.0,temporal
+month,0.0,decision_tree,0.0,temporal
+Y Coordinate,0.0,decision_tree,0.0,spatial
+X Coordinate,0.0,decision_tree,0.0,spatial
+Longitude,0.0,decision_tree,0.0,spatial
+Latitude,0.0,decision_tree,0.0,spatial
+Beat,0.0,decision_tree,0.0,spatial
+Community Area,0.0,decision_tree,0.0,spatial
+crime_density_500m,0.0,decision_tree,0.0,historical

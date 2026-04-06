@@ -1,11 +1,12 @@
 {
-  "data_path": "data/raw/chicago_crime_2022_2024_phase2.csv",
+  "data_path": "/Users/jiahao/Documents/Team22_IT5006_Predictive_Policing_AY2526Sem2-main/data/raw/chicago_crime_2022_2024_phase2.csv",
   "models_trained": [
     "logistic_regression",
+    "decision_tree",
     "random_forest",
     "hist_gradient_boosting"
   ],
   "dataset_build_summary_present": false,
-  "metrics_path": "/Users/jiahaojing/Documents/Playground/Team22_IT5006_Predictive_Policing_AY2526Sem2/artifacts/metrics/phase2_model_metrics.csv",
-  "trial_metrics_path": "/Users/jiahaojing/Documents/Playground/Team22_IT5006_Predictive_Policing_AY2526Sem2/artifacts/metrics/phase2_model_trials.csv"
+  "metrics_path": "/Users/jiahao/Documents/Team22_IT5006_Predictive_Policing_AY2526Sem2-main/artifacts/metrics/phase2_model_metrics.csv",
+  "trial_metrics_path": "/Users/jiahao/Documents/Team22_IT5006_Predictive_Policing_AY2526Sem2-main/artifacts/metrics/phase2_model_trials.csv"
 }

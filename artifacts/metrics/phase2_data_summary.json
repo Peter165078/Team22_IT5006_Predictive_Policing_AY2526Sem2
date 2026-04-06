@@ -1,5 +1,5 @@
 {
-  "data_path": "/Users/jiahaojing/Documents/Playground/Team22_IT5006_Predictive_Policing_AY2526Sem2/data/raw/chicago_crime_2022_2024_phase2.csv",
+  "data_path": "/Users/jiahao/Documents/Team22_IT5006_Predictive_Policing_AY2526Sem2-main/data/raw/chicago_crime_2022_2024_phase2.csv",
   "raw_rows_after_negative_sampling": 120000,
   "positive_rows": 60000,
   "negative_rows": 60000,
