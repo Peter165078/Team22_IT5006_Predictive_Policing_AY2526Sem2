@@ -1,0 +1,5 @@
+-r requirements.txt
+
+# Optional dependency for the PyTorch MLP benchmark in src/scripts/train.py.
+# The Streamlit demo does not need this file.
+torch>=2.6,<2.8
