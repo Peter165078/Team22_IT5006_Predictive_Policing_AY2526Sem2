@@ -36,7 +36,7 @@ A short walkthrough of the dashboard:
 # Phase 2 🛠️
 
 Phase 2 now includes a reproducible pipeline for:
-- building a single training CSV from yearly Chicago archives
+- building a district-hour modeling table from yearly Chicago archives
 - applying the shared preprocessing and feature engineering pipeline
 - training multiple models for Milestone 2
 - saving model files, prediction outputs, and metric summaries under `artifacts/`
@@ -45,15 +45,13 @@ Phase 2 now includes a reproducible pipeline for:
 
 # Phase 3 🚀
 
-Phase 3 now uses a single Streamlit application to support two presentation
-workflows:
-- **Dashboard mode** for historical exploration of Chicago crime patterns
-- **Prediction Demo mode** for entering a district, date, hour, and optional
-  spatial details to obtain a model-based crime-risk estimate
+The refactored default pipeline now targets the course-recommended temporal
+setup:
 
-The deployed demo is intentionally lightweight: it focuses on prediction
-functionality, input validation, and explainable outputs rather than a polished
-production UI.
+- use the last 10 years ending in 2024 for model development and training
+- reserve 2025 as an explicit holdout year for validation and test
+
+The code no longer defaults to the earlier reduced local-subset benchmark.
 
 ---
 
@@ -61,7 +59,7 @@ production UI.
 
 ## Installation (Project Setup)
 
-This project supports both **uv** and **conda** for dependency and environment management, and uses **Python 3.10**.
+This project supports both **uv** and **conda** for dependency and environment management, and uses **Python 3.11**.
 
 ### Option 1: Using `uv`
 
@@ -74,10 +72,10 @@ If you are using `uv`, follow these steps:
    cd <repo-name>
    ```
 
-2. Create and activate the virtual environment with Python 3.10:
+2. Create and activate the virtual environment with Python 3.11:
 
    ```bash
-   uv venv -p 3.10
+   uv venv -p 3.11
    source .venv/bin/activate
    ```
 
@@ -98,10 +96,10 @@ If you prefer using `conda`, you can set up the environment using the following 
    cd <repo-name>
    ```
 
-2. Create a new `conda` environment with Python 3.10:
+2. Create a new `conda` environment with Python 3.11:
 
    ```bash
-   conda create --name <env-name> python=3.10
+   conda create --name <env-name> python=3.11
    ```
 
 3. Activate the `conda` environment:
@@ -115,24 +113,6 @@ If you prefer using `conda`, you can set up the environment using the following 
    ```bash
    pip install -r requirements.txt
    ```
-
-### Optional Notebook / EDA Dependencies
-
-If you want to rerun the exploratory notebooks and mapping-heavy EDA workflow,
-install:
-
-```bash
-pip install -r requirements-analysis.txt
-```
-
-### Optional MLP Dependency
-
-The default Phase 2 and Phase 3 workflows do **not** require PyTorch. If you
-want to rerun the optional `crime_mlp` benchmark, install:
-
-```bash
-pip install -r requirements-mlp.txt
-```
 ---
 
 # Data Source 📊
@@ -150,6 +130,15 @@ About the data:
 2. Click **Export**  
 3. Choose **CSV**  
 4. Download the file  
+
+For yearly archive reconstruction inside this project, you can also use:
+
+```bash
+python src/scripts/download_chicago_year_archive.py --year 2025
+```
+
+This writes `apps/dashboard/split_data_by_year/chicago_crime_2025.csv.zip` in
+the same format expected by the dataset builder and dashboard.
 
 ## Where to Place the File
 After downloading:  
@@ -170,11 +159,14 @@ After downloading:
 For GitHub submission, we distinguish between:
 
 - **demo assets kept in the repo**: yearly dashboard ZIP files under `apps/dashboard/split_data_by_year/`
-- **deployment artifact kept in the repo**: `artifacts/models/hist_gradient_boosting.pkl`, which powers the Prediction Demo page
-- **local training outputs that can be regenerated**: `data/raw/chicago_crime_2022_2024_phase2.csv` and prediction dumps under `artifacts/metrics/predictions/`
+- **local training outputs not committed by default**: `data/raw/chicago_crime_district_hour_2015_2025_phase2.csv`, saved model binaries under `artifacts/models/`, and prediction dumps under `artifacts/metrics/predictions/`
 
-This keeps the dashboard and prediction demo runnable while avoiding raw-data
-sprawl in version control.
+This keeps the dashboard runnable while avoiding unnecessary training artifacts in version control.
+
+For the full refactored modeling run, the pipeline expects yearly archives for
+`2015` through `2025`. The modeling task is now defined on explicit
+district-hour units, so negative labels arise naturally from zero-incident
+hours instead of being synthesized from copied event rows.
 
 ---
 
@@ -197,13 +189,12 @@ artifacts/
 
 ---
 
-# Run Demo App
-The Streamlit app provides both interactive historical exploration and a
-prediction-oriented Phase 3 demo.  
+# Run Dashboard
+The dashboard provides interactive visualization of crime data.  
 
 Example (Streamlit):  
 ```bash
-python -m streamlit run apps/dashboard/app.py
+streamlit run apps/dashboard/app.py
 ```
 
 Then open the local URL shown in the terminal (typically):  
@@ -211,27 +202,7 @@ Then open the local URL shown in the terminal (typically):
 http://localhost:8501
 ```
 
-The app expects:
-- yearly ZIP files in `apps/dashboard/split_data_by_year/`
-- `artifacts/models/hist_gradient_boosting.pkl` for the Prediction Demo page
-
-## Prediction Demo Workflow
-
-The Phase 3 demo is designed to satisfy the course requirement for a basic,
-accessible prediction interface. In `Prediction Demo`, the user:
-
-1. selects a police district
-2. chooses a date and hour
-3. optionally refines ward, community area, beat, latitude, and longitude
-4. clicks `Predict Risk`
-5. receives a probability score, a low/medium/high risk label, and recent
-   district activity counts
-
-Built-in validation includes:
-- date restrictions to the modeled horizon
-- bounded numeric inputs for district, ward, beat, community area, latitude,
-  and longitude
-- rejection of cold-start cases where historical context is unavailable
+The dashboard expects yearly ZIP files to exist in `apps/dashboard/split_data_by_year/`.
 
 ---
 
@@ -240,18 +211,18 @@ Built-in validation includes:
 ## 1. Build the local Phase 2 dataset
 
 ```bash
-python src/scripts/prepare_phase2_data.py --start-year 2022 --end-year 2024 --overwrite
+python src/scripts/prepare_phase2_data.py --start-year 2015 --end-year 2025 --overwrite
 ```
 
-This reads the yearly ZIP archives from `apps/dashboard/split_data_by_year/` and writes a consolidated CSV to `data/raw/`. By default, the Phase 2 helper script caps each year at `20,000` rows to keep local report-generation runs reproducible and practical.
+This reads the yearly ZIP archives from `apps/dashboard/split_data_by_year/` and writes a district-hour modeling dataset to `data/raw/`. The refactored default uses full-year data across the requested range unless an explicit debug cap is passed.
 
 ## 2. Train multiple models
 
 ```bash
-python src/scripts/train.py --start-year 2022 --end-year 2024
+python src/scripts/train.py --start-year 2015 --end-year 2025
 ```
 
-The default report-oriented benchmark trains four classical baselines: Logistic Regression, Decision Tree, Random Forest, and HistGradientBoosting. The optional PyTorch MLP remains available through `--models crime_mlp`.
+The refactored default benchmark trains on `2015-2024` and reserves `2025` as a chronological holdout year. The default classical baselines remain Logistic Regression, Decision Tree, Random Forest, and HistGradientBoosting. The optional PyTorch MLP remains available through `--models crime_mlp`.
 
 ## 3. Export spatial-temporal evaluation summaries
 
@@ -281,110 +252,100 @@ docs/phase2_methodology.md
 
 ---
 
-# Phase 3 Quick Start
-
-## 1. Install demo dependencies
-
-```bash
-pip install -r requirements.txt
-```
-
-## 2. Launch the Streamlit app
-
-```bash
-python -m streamlit run apps/dashboard/app.py
-```
-
-## 3. Demo flow to show in presentation
-
-- Start on `Welcome`
-- Open `Dashboard` and briefly show the historical map and temporal heatmap
-- Switch to `Prediction Demo`
-- Enter a district, date, and hour
-- Show the predicted probability, risk band, and recent district counts
-- Emphasize that the tool is for planning support, not automated enforcement
-
-## 4. Deployment note
-
-The current demo is packaged so that the Streamlit app can run directly from
-the repository without rebuilding the training pipeline first. The prediction
-page uses the bundled `HistGradientBoosting` model artifact under
-`artifacts/models/`.
-
----
-
-# Repository Structure
+# Repository Structure (Still Designing & Developing)
 
 ### `apps/`
 User-facing applications (demo/UI layer).  
 - `apps/dashboard/`  
-  Streamlit application used in Phase 1 for EDA communication and in Phase 3 for the final prediction demo. It now includes both a historical dashboard view and a model-backed prediction page.  
+  Interactive dashboard used in Phase 1 (EDA presentation) and later reused for Phase 3 demo (visualizing inputs/outputs, maps, filters, etc.).  
 - `apps/web_frontend/`  
-  Optional frontend experimentation area. It is not required for the submitted demo workflow.  
+  Optional separate web frontend (e.g., React/Vue). Use this if you plan to build a standalone UI that calls the API from `deployment/`.  
 
-> The submitted Phase 3 demo runs from `apps/dashboard/app.py`.
+> Recommendation: If you use Streamlit for the dashboard, keep it under `apps/dashboard/`.
 
 ### `artifacts/`
 Generated outputs produced by training and evaluation runs (not raw code).  
 - `artifacts/figures/`  
   Exported plots for reports (EDA charts, model performance plots, maps, etc.).  
 - `artifacts/models/`  
-  Saved model artifacts used for reproducibility and deployment. The Streamlit prediction demo currently loads `hist_gradient_boosting.pkl`.  
+  Saved model artifacts (e.g., `.pkl`/`.joblib`) used for reproducibility and deployment.  
 
-> Keep demo-critical artifacts small and versioned when they are required for live presentation.
+> Note: Large artifacts may be excluded from Git and stored via releases or external storage depending on team preference.
 
 ### `data/`
 Datasets and intermediate data files.  
 - `data/raw/` — Original raw datasets (usually ignored by Git)  
-- `data/processed/` — Optional cleaned/feature-engineered datasets used for training  
+- `data/processed/` — Cleaned/feature-engineered datasets used for training  
 
-For the final demo, the app rebuilds a temporary 2022-2024 modeling dataset
-from the yearly ZIP files rather than depending on a checked-in processed CSV.
+### `deployment/`
+Deployment layer for serving predictions (Phase 3).  
+This directory contains:  
+- A Flask (or FastAPI) API server  
+- Configuration for serving the trained model from `artifacts/models/`  
+- Optional Docker files and deployment scripts  
 
 ### `docs/`
-Supporting documentation for the course submission and internal handoff.  
-Examples include:
-- Phase 2 methodology notes
-- revision notes responding to grader feedback
-- final report handoff guidance
-- Phase 3 delivery checklist
+Project documentation source intended for Read the Docs (or similar).  
+Use this for detailed technical documentation beyond the `README.md`, such as:  
+- Data dictionary  
+- Modeling approach  
+- API contract  
+- Reproducibility guide  
 
 ### `notebooks/`
 Jupyter notebooks used primarily for exploration, experimentation, and reporting.  
-These notebooks support EDA and report figure generation. Reusable logic should
-stay in `src/`, not be duplicated inside notebooks.
+Current notebooks:  
+- `01_eda_overview.ipynb` — Overall dataset understanding and cleaning notes  
+- `02_eda_time_patterns.ipynb` — Temporal pattern analysis  
+- `03_eda_spatial_patterns.ipynb` — Spatial analysis (hotspots, maps)  
 
 **Rule of thumb:** Notebooks are for exploration and visualization; reusable logic should live in `src/`.
 
 ### `reports/`
 PDF deliverables for each phase submission.  
 - `reports/Phase1_Report.pdf` — Phase 1 report (literature + EDA + dashboard summary)  
-- `reports/Phase2_Report.pdf` / `reports/Phase3_Report.pdf` — final compiled deliverables when ready
+- (Later) `reports/Phase2_Report.pdf`, `reports/Phase3_Report.pdf`  
+
+### `scripts/`
+Command-line convenience scripts to standardize common workflows.  
+- `scripts/train.sh` — Runs training pipeline end-to-end (Phase 2)  
+- `scripts/deploy.sh` — Starts deployment stack or API server (Phase 3)  
+
+These scripts should call into `src/` so that training/deployment stay consistent and reproducible.
 
 ### `src/`
 Core reusable Python package code (shared by notebooks, scripts, dashboard, and API).  
+- `src/config/`  
+  Configuration files (paths, parameters, feature lists, model configs, etc.).  
 - `src/data/`  
-  Dataset construction and the shared preprocessing pipeline used by both training and inference  
-- `src/scripts/`  
-  Reproducible CLI entrypoints for preparing the Phase 2 dataset, training models, exporting metrics, and feature importance summaries  
+  Data ingestion and feature engineering:  
+  - `load.py` — Data loading utilities  
+  - `features.py` — Feature engineering shared by training and inference  
+- `src/models/`  
+  Modeling pipelines:  
+  - `train.py` — Training entrypoints and model selection logic  
+- `src/evaluation/`  
+  Evaluation utilities:  
+  - `metrics.py` — Metrics and evaluation routines  
+- `src/utils/`  
+  Common helper utilities (logging, IO helpers, shared constants, etc.).  
 - `src/__init__.py`  
-  Package initialization when present
+  Package initialization.  
 
-> Goal: All “single source of truth” logic should live in `src/` to avoid duplicating code across notebooks and the Streamlit demo.
+> Goal: All “single source of truth” logic should live in `src/` to avoid duplicating code across notebooks and deployment.
 
 ## Root Files
 - `.gitignore` — Git ignore rules (should exclude large raw data and local caches)  
-- `requirements.txt` — default dependencies for the final demo and standard project workflows
-- `requirements-analysis.txt` — optional extras for notebooks and EDA utilities
-- `requirements-mlp.txt` — optional extra dependency for rerunning the PyTorch MLP benchmark
+- `.python-version` — Python version pin (pyenv compatible)  
+- `pyproject.toml` / `uv.lock` — Dependency management and reproducible environments  
 - `README.md` — High-level overview and repo navigation (this file)  
 
 ## Phase Mapping (How this structure supports the course)
 - **Phase 1 (Literature + EDA + Dashboard)**  
   `notebooks/` + `apps/dashboard/` + outputs in `artifacts/figures/` + submission in `reports/`  
 - **Phase 2 (Model Training + Evaluation)**  
-  `src/` (train/eval code) + saved outputs in `artifacts/models/` and `artifacts/metrics/`  
+  `src/` (train/eval code) + `scripts/train.sh` + saved outputs in `artifacts/models/` and `artifacts/metrics/`  
 - **Phase 3 (Deployment + Demo)**  
-  `apps/dashboard/` (demo UI) + model loaded from `artifacts/models/` + supporting notes in `docs/`  
+  `deployment/` (API server) + `apps/dashboard/` or `apps/web_frontend/` (demo UI) + model loaded from `artifacts/models/`  
 
 ---

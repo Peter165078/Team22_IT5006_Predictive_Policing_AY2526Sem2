@@ -31,11 +31,12 @@ This note tracks the concrete project updates made in response to the Milestone 
    - Spatial-temporal evaluation was rerun for the added `Decision Tree` baseline.
    - The revised comparison now makes it explicit that aggregate spatial performance does not follow the same ranking as record-level AUROC/AUPRC.
 
-8. **Experiment defaults aligned**
-   - The default Phase 2 sampling cap in the scripts has been aligned to `20,000` rows per year so the code and report describe the same experimental scale.
+8. **Experiment defaults refactored**
+   - The default modeling scripts now target the course-recommended temporal setup: train on `2015-2024` and reserve `2025` as a holdout year.
+   - The dataset builder no longer silently shrinks the scope when requested yearly archives are missing.
 
 ## Remaining follow-up
 
-- If you want the instructor to see the revisions quickly, send this note together with the updated Phase 2 draft sections.
+- Regenerate the modeling artifacts after the `2025` yearly archive is added locally.
 - Fold the revised Phase 2 sections directly into the Phase 3 final report and presentation script.
-- Run one final proofreading pass on the polished report PDF before sending it to the instructor.
+- Run one final proofreading pass on the polished report PDF before submission.

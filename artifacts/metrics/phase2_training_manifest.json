@@ -1,5 +1,11 @@
 {
-  "data_path": "/Users/jiahao/Documents/Team22_IT5006_Predictive_Policing_AY2526Sem2-main/data/raw/chicago_crime_2022_2024_phase2.csv",
+  "data_path": "/Users/jiahao/Documents/Team22_IT5006_Predictive_Policing_AY2526Sem2-main/data/raw/chicago_crime_district_hour_2015_2025_phase2.csv",
+  "start_year": 2015,
+  "end_year": 2025,
+  "train_start_year": 2015,
+  "train_end_year": 2024,
+  "holdout_year": 2025,
+  "holdout_val_fraction": 0.5,
   "models_trained": [
     "logistic_regression",
     "decision_tree",

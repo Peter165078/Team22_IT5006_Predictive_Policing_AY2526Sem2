@@ -22,12 +22,18 @@ os.environ.setdefault("MPLCONFIGDIR", str(Path(tempfile.gettempdir()) / "mplconf
 os.environ.setdefault("XDG_CACHE_HOME", str(Path(tempfile.gettempdir()) / ".cache"))
 os.environ.setdefault("LOKY_MAX_CPU_COUNT", str(os.cpu_count() or 1))
 
-import matplotlib
-matplotlib.use("Agg")
-import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from sklearn.inspection import permutation_importance
+
+try:
+    import matplotlib
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+    MATPLOTLIB_AVAILABLE = True
+except Exception:
+    plt = None
+    MATPLOTLIB_AVAILABLE = False
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(PROJECT_ROOT))
@@ -35,9 +41,13 @@ sys.path.insert(0, str(PROJECT_ROOT))
 from src.scripts.train import prepare_data
 
 RANDOM_STATE = 42
-DATA_PATH = PROJECT_ROOT / "data" / "raw" / "chicago_crime_2022_2024_phase2.csv"
+DATA_PATH = PROJECT_ROOT / "data" / "raw" / "chicago_crime_district_hour_2015_2025_phase2.csv"
 MODELS_DIR = PROJECT_ROOT / "artifacts" / "models"
 OUTPUT_DIR = PROJECT_ROOT / "artifacts" / "metrics" / "feature_importance"
+TRAIN_START_YEAR = 2015
+TRAIN_END_YEAR = 2024
+HOLDOUT_YEAR = 2025
+HOLDOUT_VAL_FRACTION = 0.5
 
 
 def feature_group(feature_name: str) -> str:
@@ -84,6 +94,8 @@ def build_importance_df(feature_names: list[str], values: np.ndarray, model_name
 
 
 def save_bar_plot(df: pd.DataFrame, output_path: Path, title: str, top_n: int = 15) -> None:
+    if not MATPLOTLIB_AVAILABLE:
+        return
     plot_df = df.head(top_n).copy().iloc[::-1]
     plt.figure(figsize=(10, 6))
     plt.barh(plot_df["feature"], plot_df["importance_abs"], color="#3b82f6")
@@ -111,7 +123,14 @@ def summarize_groups(df: pd.DataFrame) -> pd.DataFrame:
 def main() -> None:
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
-    _, _, _, _, X_test, y_test = prepare_data(DATA_PATH, neg_ratio=1.0)
+    _, _, _, _, X_test, y_test = prepare_data(
+        DATA_PATH,
+        neg_ratio=1.0,
+        train_start_year=TRAIN_START_YEAR,
+        train_end_year=TRAIN_END_YEAR,
+        holdout_year=HOLDOUT_YEAR,
+        holdout_val_fraction=HOLDOUT_VAL_FRACTION,
+    )
     feature_names = X_test.columns.tolist()
 
     logistic_model = load_pickle(MODELS_DIR / "logistic_regression.pkl")
@@ -160,11 +179,12 @@ def main() -> None:
 
     for model_name, df in outputs.items():
         df.to_csv(OUTPUT_DIR / f"{model_name}_feature_importance.csv", index=False)
-        save_bar_plot(
-            df,
-            OUTPUT_DIR / f"{model_name}_feature_importance_top15.png",
-            title=f"Top 15 Feature Importances ({model_name})",
-        )
+        if MATPLOTLIB_AVAILABLE:
+            save_bar_plot(
+                df,
+                OUTPUT_DIR / f"{model_name}_feature_importance_top15.png",
+                title=f"Top 15 Feature Importances ({model_name})",
+            )
 
     hist_group_df = summarize_groups(hist_gb_df)
     hist_group_df["model"] = "hist_gradient_boosting"

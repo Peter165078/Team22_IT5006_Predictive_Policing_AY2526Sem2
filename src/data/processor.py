@@ -12,14 +12,17 @@ whether a crime will occur (target = 1) or not (target = 0).
 Key design decisions
 --------------------
 1. Negative sample construction
-   Raw data contains only reported crimes (all positive).  Negatives are
-   synthesised only to make binary supervision possible by sampling
-   (district, timestamp) combinations that do NOT appear in the positive set.
-   Residual class-imbalance handling is done separately by model weighting
-   (`class_weight` / weighted sampling), not by duplicating positives.
+   If the input dataset already contains an explicit `target` column, the
+   processor uses those natural labels directly. Otherwise, raw incident-only
+   event data is converted into a binary task by synthetic negative
+   construction. Residual class-imbalance handling is done separately by model
+   weighting (`class_weight` / weighted sampling), not by duplicating positives.
 
-2. Chronological split  — no data leakage
-   Records sorted by date; split 70 / 15 / 15 chronologically.
+2. Explicit temporal holdout for model evaluation
+   The processor exposes train / val / test indices after sorting the full
+   dataset by time. The legacy fallback is a chronological 70 / 15 / 15 split,
+   but the refactored training pipeline replaces that with an explicit
+   year-based holdout (e.g. train on 2015–2024, validate/test on 2025).
 
 3. Historical features computed for ALL splits (train, val, test)
    For every sample at time T we count crimes strictly before T in the same
@@ -106,6 +109,19 @@ def _build_grid_cell(lat: pd.Series, lon: pd.Series,
     return lat_bin.astype(str) + "_" + lon_bin.astype(str)
 
 
+def _parse_mixed_datetime(series: pd.Series) -> pd.Series:
+    legacy = pd.to_datetime(
+        series,
+        format="%m/%d/%Y %I:%M:%S %p",
+        errors="coerce",
+    )
+    if legacy.notna().all():
+        return legacy
+
+    fallback = pd.to_datetime(series, errors="coerce")
+    return legacy.fillna(fallback)
+
+
 # ──────────────────────────────────────────────────────────────────────────────
 # DataProcessor
 # ──────────────────────────────────────────────────────────────────────────────
@@ -118,6 +134,7 @@ class DataProcessor:
     -----
     >>> proc = DataProcessor("data/raw/Crimes_....csv")
     >>> proc.load_and_split()
+    >>> proc.set_split_indices(train_idx, val_idx, test_idx, split_label="year holdout")
     >>> X_train, y_train = proc.fit_transform_train()
     >>> X_val,   y_val   = proc.transform(proc.val_idx)
     >>> X_test,  y_test  = proc.transform(proc.test_idx)
@@ -155,14 +172,22 @@ class DataProcessor:
         print("  Loading raw data …")
         df = pd.read_csv(self.data_path, low_memory=False)
 
-        df[DATE_COL] = pd.to_datetime(
-            df[DATE_COL], format="%m/%d/%Y %I:%M:%S %p", errors="coerce"
-        )
+        df[DATE_COL] = _parse_mixed_datetime(df[DATE_COL])
         df = df.dropna(subset=[DATE_COL]).sort_values(DATE_COL).reset_index(drop=True)
-        print(f"  Positives: {len(df):,}  "
-              f"({df[DATE_COL].min().date()} → {df[DATE_COL].max().date()})")
 
-        df = self._build_negatives(df)
+        if TARGET_COL in df.columns:
+            df[TARGET_COL] = pd.to_numeric(df[TARGET_COL], errors="coerce").fillna(0).astype(int)
+            print(
+                f"  Natural labels: {len(df):,} rows  "
+                f"({df[DATE_COL].min().date()} → {df[DATE_COL].max().date()})"
+            )
+            print(f"  Positive units: {int(df[TARGET_COL].sum()):,}")
+            print(f"  Negative units: {int((1 - df[TARGET_COL]).sum()):,}")
+        else:
+            print(f"  Positives: {len(df):,}  "
+                  f"({df[DATE_COL].min().date()} → {df[DATE_COL].max().date()})")
+            df = self._build_negatives(df)
+
         df = df.sort_values(DATE_COL).reset_index(drop=True)
 
         # ── Build full-dataset daily aggregation tables ───────────────────────
@@ -189,14 +214,6 @@ class DataProcessor:
             .reset_index(name="count")
         )
 
-        n    = len(df)
-        n_tr = int(n * TRAIN_FRAC)
-        n_va = int(n * VAL_FRAC)
-
-        self.train_idx = np.arange(0, n_tr)
-        self.val_idx   = np.arange(n_tr, n_tr + n_va)
-        self.test_idx  = np.arange(n_tr + n_va, n)
-
         self.labels   = df[TARGET_COL].copy()
         self.raw_data = df.drop(columns=[TARGET_COL]).copy()
 
@@ -219,13 +236,39 @@ class DataProcessor:
             min_key = min(HIST_WINDOW_CANDIDATES, key=HIST_WINDOW_CANDIDATES.get)
             self.hist_windows = {min_key: HIST_WINDOW_CANDIDATES[min_key]}
 
-        print(f"  Total  : {n:,}  "
-              f"train {len(self.train_idx):,} | "
-              f"val {len(self.val_idx):,} | "
-              f"test {len(self.test_idx):,}")
         print(f"  Date span     : {total_days} days")
         print(f"  Active windows: {list(self.hist_windows.keys())}")
         print(f"  Pos rate: {self.labels.mean():.3f}")
+
+        n = len(df)
+        n_tr = int(n * TRAIN_FRAC)
+        n_va = int(n * VAL_FRAC)
+        self.set_split_indices(
+            np.arange(0, n_tr),
+            np.arange(n_tr, n_tr + n_va),
+            np.arange(n_tr + n_va, n),
+            split_label="default chronological 70/15/15",
+        )
+
+    def set_split_indices(
+        self,
+        train_idx: np.ndarray,
+        val_idx: np.ndarray,
+        test_idx: np.ndarray,
+        *,
+        split_label: str,
+    ) -> None:
+        self.train_idx = np.asarray(train_idx, dtype=int)
+        self.val_idx = np.asarray(val_idx, dtype=int)
+        self.test_idx = np.asarray(test_idx, dtype=int)
+        total = len(self.raw_data) if self.raw_data is not None else 0
+        print(
+            f"  Split ({split_label}): "
+            f"total {total:,} | "
+            f"train {len(self.train_idx):,} | "
+            f"val {len(self.val_idx):,} | "
+            f"test {len(self.test_idx):,}"
+        )
 
     # ──────────────────────────────────────────────────────────────────────────
     # Negative sample construction
@@ -267,7 +310,8 @@ class DataProcessor:
         districts  = pos_df["_di"].values
         timestamps = pos_df["_day"].values          # sample day-level timestamps
         n_pos      = len(pos_df)
-        negatives: List[Dict] = []
+        negative_batches: List[pd.DataFrame] = []
+        negatives_built = 0
         district_to_indices = {
             district: idx.to_numpy(copy=False)
             for district, idx in pos_df.groupby("_di").groups.items()
@@ -277,8 +321,9 @@ class DataProcessor:
         max_attempts = max(n_neg * 100, 500_000)
         attempts     = 0
 
-        while len(negatives) < n_neg and attempts < max_attempts:
-            batch = min(n_neg * 5, max_attempts - attempts)
+        while negatives_built < n_neg and attempts < max_attempts:
+            remaining = n_neg - negatives_built
+            batch = min(max(remaining, 100_000), 500_000, max_attempts - attempts)
             attempts += batch
 
             idx_d   = rng.integers(0, n_pos, size=batch)
@@ -294,41 +339,76 @@ class DataProcessor:
             s_dt = s_days + pd.to_timedelta(rand_hours, unit="h") \
                           + pd.to_timedelta(rand_minutes, unit="m")
 
-            for dist, dt in zip(s_di, s_dt):
-                if len(negatives) >= n_neg:
-                    break
-                day_key = str(dist) + "_" + str(pd.Timestamp(dt).normalize())
-                if day_key not in crime_keys:
-                    template_idx = district_to_indices.get(dist)
-                    if template_idx is None or len(template_idx) == 0:
-                        template_row = pos_df.iloc[rng.integers(0, n_pos)]
-                    else:
-                        template_row = pos_df.iloc[rng.choice(template_idx)]
-                    negatives.append({
-                        DATE_COL:               dt,
-                        "District":             template_row.get("District", np.nan),
-                        "Ward":                 template_row.get("Ward", np.nan),
-                        "Community Area":       template_row.get("Community Area", np.nan),
-                        "Beat":                 template_row.get("Beat", np.nan),
-                        "Latitude":             template_row.get("Latitude", np.nan),
-                        "Longitude":            template_row.get("Longitude", np.nan),
-                        "X Coordinate":         template_row.get("X Coordinate", np.nan),
-                        "Y Coordinate":         template_row.get("Y Coordinate", np.nan),
-                        "Primary Type":         "NO_CRIME",
-                        "Description":          "NO_CRIME",
-                        "Location Description": "UNKNOWN",
-                        "IUCR":                 "0000",
-                        "Arrest":               False,
-                        "Domestic":             False,
-                        TARGET_COL:             0,
-                    })
+            candidate_df = pd.DataFrame(
+                {
+                    "_di": s_di,
+                    DATE_COL: s_dt,
+                }
+            )
+            candidate_df["_day"] = pd.to_datetime(candidate_df[DATE_COL]).dt.normalize()
+            candidate_df["_key"] = (
+                candidate_df["_di"].astype(str) + "_" + candidate_df["_day"].astype(str)
+            )
+            accepted = candidate_df.loc[~candidate_df["_key"].isin(crime_keys)].copy()
+            if accepted.empty:
+                continue
 
-        if len(negatives) < n_neg:
-            print(f"  ⚠  Only {len(negatives):,} / {n_neg:,} negatives generated "
+            if len(accepted) > remaining:
+                accepted = accepted.iloc[:remaining].copy()
+
+            template_positions = np.empty(len(accepted), dtype=int)
+            district_values = accepted["_di"].to_numpy()
+            for district in pd.unique(district_values):
+                district_mask = district_values == district
+                template_idx = district_to_indices.get(district)
+                if template_idx is None or len(template_idx) == 0:
+                    template_positions[district_mask] = rng.integers(0, n_pos, size=district_mask.sum())
+                else:
+                    template_positions[district_mask] = rng.choice(
+                        template_idx,
+                        size=district_mask.sum(),
+                        replace=True,
+                    )
+
+            templates = pos_df.iloc[template_positions].reset_index(drop=True)
+            neg_df = pd.DataFrame(
+                {
+                    DATE_COL: accepted[DATE_COL].to_numpy(),
+                    "District": templates["District"].to_numpy(),
+                    "Ward": templates["Ward"].to_numpy(),
+                    "Community Area": templates["Community Area"].to_numpy(),
+                    "Beat": templates["Beat"].to_numpy(),
+                    "Latitude": templates["Latitude"].to_numpy(),
+                    "Longitude": templates["Longitude"].to_numpy(),
+                    "X Coordinate": templates["X Coordinate"].to_numpy(),
+                    "Y Coordinate": templates["Y Coordinate"].to_numpy(),
+                    "Primary Type": "NO_CRIME",
+                    "Description": "NO_CRIME",
+                    "Location Description": "UNKNOWN",
+                    "IUCR": "0000",
+                    "Arrest": False,
+                    "Domestic": False,
+                    TARGET_COL: 0,
+                }
+            )
+            negative_batches.append(neg_df)
+            negatives_built += len(neg_df)
+            if negatives_built % 500_000 == 0 or negatives_built >= n_neg:
+                print(
+                    f"    negatives built: {negatives_built:,} / {n_neg:,} "
+                    f"after {attempts:,} attempts"
+                )
+
+        if negatives_built < n_neg:
+            print(f"  ⚠  Only {negatives_built:,} / {n_neg:,} negatives generated "
                   f"after {max_attempts:,} attempts.  "
                   f"Consider lowering neg_ratio or relaxing collision rules.")
 
-        neg_df = pd.DataFrame(negatives)
+        neg_df = (
+            pd.concat(negative_batches, ignore_index=True)
+            if negative_batches
+            else pd.DataFrame(columns=[DATE_COL, TARGET_COL])
+        )
         pos_df = pos_df.drop(columns=["_hw", "_day", "_di"])
         pos_df[TARGET_COL] = 1
 
@@ -725,36 +805,31 @@ class DataProcessor:
             else pd.Series(["UNKNOWN"] * len(df), index=df.index)
         )
 
-        dist_cumsum = self._build_cumsum(dist_daily, "_district")
-        grid_cumsum = self._build_cumsum(grid_daily, "_grid")
-
-        n           = len(df)
-        dates_arr   = dates.values
-        dist_arr    = districts.values
-        grid_arr    = grid_cells.values
-
-        # Find the shortest active window — its "has" flag determines row drop
-        min_days    = min(self.hist_windows.values())
-        cold_start  = np.zeros(n, dtype=bool)   # True = no history at all → drop
+        min_days = min(self.hist_windows.values())
+        cold_start = np.zeros(len(df), dtype=bool)
 
         # ── District-level windows ────────────────────────────────────────────
         for wname, days in self.hist_windows.items():
-            counts = []
-            for i, (dt, di) in enumerate(zip(dates_arr, dist_arr)):
-                c, has = self._window_count(dist_cumsum.get(str(di)), dt, days)
-                counts.append(c)
-                # Mark cold-start only for the shortest window
-                if days == min_days and not has:
-                    cold_start[i] = True
+            counts, has_prior = self._window_counts_for_groups(
+                dates,
+                districts,
+                dist_daily,
+                "_district",
+                days,
+            )
             df[f"crimes_last_{wname}"] = counts
+            if days == min_days:
+                cold_start = ~has_prior
 
         # ── Grid-cell density (shortest active window ≤ 30d, else 7d) ────────
         density_days = min(30, max(self.hist_windows.values()))
-        density = []
-        for i, (dt, gc) in enumerate(zip(dates_arr, grid_arr)):
-            c, has = self._window_count(grid_cumsum.get(str(gc)), dt, density_days)
-            density.append(c)
-            # cold_start already set by district windows above
+        density, _ = self._window_counts_for_groups(
+            dates,
+            grid_cells,
+            grid_daily,
+            "_grid",
+            density_days,
+        )
         df["crime_density_500m"] = density
 
         surviving_mask = ~cold_start
@@ -765,35 +840,64 @@ class DataProcessor:
         return df[surviving_mask].reset_index(drop=True), surviving_mask
 
     @staticmethod
-    def _build_cumsum(daily: pd.DataFrame, group_col: str) -> Dict:
-        result = {}
-        for grp, sub in daily.groupby(group_col):
-            sub = sub.sort_values("_date").set_index("_date")
-            result[str(grp)] = sub["count"].cumsum()
-        return result
+    def _window_counts_for_groups(
+        dates: pd.Series,
+        groups: pd.Series,
+        daily: pd.DataFrame,
+        group_col: str,
+        days: int,
+    ) -> Tuple[np.ndarray, np.ndarray]:
+        if daily is None or daily.empty:
+            zeros = np.zeros(len(dates), dtype=int)
+            return zeros, np.zeros(len(dates), dtype=bool)
 
-    @staticmethod
-    def _window_count(
-        cum:        Optional[pd.Series],
-        query_date,
-        days:       int,
-    ) -> Tuple[int, bool]:
-        """
-        Returns (count, has_history).
+        right = daily.copy()
+        right[group_col] = right[group_col].astype(str)
+        right = right.sort_values([group_col, "_date"]).reset_index(drop=True)
+        right["_cum_count"] = right.groupby(group_col)["count"].cumsum()
+        right = right.rename(columns={"_date": "_lookup_date"})
 
-        has_history=False means no cumsum data exists within the window
-        [T-days, T-1].  The caller uses this to drop the row entirely.
-        """
-        if cum is None or len(cum) == 0:
-            return 0, False
-        end   = pd.Timestamp(query_date).normalize() - pd.Timedelta(days=1)
-        start = end - pd.Timedelta(days=days - 1)
-        idx   = cum.index
-        if not ((idx >= start) & (idx <= end)).any():
-            return 0, False
-        v_end   = cum[idx <= end].iloc[-1]   if (idx <= end).any()   else 0
-        v_start = cum[idx <  start].iloc[-1] if (idx <  start).any() else 0
-        return max(0, int(v_end - v_start)), True
+        query = pd.DataFrame(
+            {
+                "_row_id": np.arange(len(dates)),
+                group_col: groups.astype(str).to_numpy(),
+                "_query_date": pd.to_datetime(dates).dt.normalize().to_numpy(),
+            }
+        )
+        query["_end_cutoff"] = query["_query_date"] - pd.Timedelta(days=1)
+        query["_start_cutoff"] = (
+            query["_query_date"] - pd.Timedelta(days=days) - pd.Timedelta(nanoseconds=1)
+        )
+
+        end_parts = []
+        start_parts = []
+        for group_value, query_group in query.groupby(group_col, sort=False):
+            right_group = right.loc[right[group_col] == group_value, ["_lookup_date", "_cum_count"]]
+            end_part = pd.merge_asof(
+                query_group[["_row_id", "_end_cutoff"]].sort_values("_end_cutoff"),
+                right_group.sort_values("_lookup_date"),
+                left_on="_end_cutoff",
+                right_on="_lookup_date",
+                direction="backward",
+            )
+            start_part = pd.merge_asof(
+                query_group[["_row_id", "_start_cutoff"]].sort_values("_start_cutoff"),
+                right_group.sort_values("_lookup_date"),
+                left_on="_start_cutoff",
+                right_on="_lookup_date",
+                direction="backward",
+            )
+            end_parts.append(end_part[["_row_id", "_cum_count"]])
+            start_parts.append(start_part[["_row_id", "_cum_count"]])
+
+        end_lookup = pd.concat(end_parts, ignore_index=True)
+        start_lookup = pd.concat(start_parts, ignore_index=True)
+
+        end_series = end_lookup.set_index("_row_id")["_cum_count"].reindex(range(len(query)))
+        start_series = start_lookup.set_index("_row_id")["_cum_count"].reindex(range(len(query))).fillna(0)
+        counts = (end_series.fillna(0) - start_series).clip(lower=0).astype(int).to_numpy()
+        has_prior = end_series.notna().to_numpy()
+        return counts, has_prior
 
     # ──────────────────────────────────────────────────────────────────────────
     # Step 7 — StandardScaler

@@ -17,23 +17,11 @@ The analytical pipeline follows a strict pre-event prediction logic. Only inform
 
 ### 1.2 Data preprocessing and cleaning methodology
 
-#### Data source and local experimental scope
+#### Data source and refactored modeling scope
 
-The raw data source is the Chicago crime archive that has already been split by year in the repository under `apps/dashboard/split_data_by_year/`. For the current reproducible Phase 2 training run, we constructed a consolidated local dataset from the years **2022 to 2024**. To keep iteration time manageable on the development machine, we sampled **20,000 rows per year**, giving **60,000 positive incident rows** before negative-label construction. This choice should be described as a practical experimentation setup rather than the final upper bound of the project.
+The raw data source is the Chicago crime archive that has already been split by year in the repository under `apps/dashboard/split_data_by_year/`. In the refactored pipeline, the intended modeling scope follows the course recommendation more closely: yearly archives from **2015 to 2024** are used for model development and training, while **2025** is reserved as an explicit chronological holdout year for validation and test. The dataset builder now expects the full requested year range and raises an explicit error if any required yearly archive is missing, instead of silently shrinking the modeling scope.
 
-After synthetic negative-label construction with a 1:1 ratio, the effective modeling dataset contains **120,000 rows** with a balanced class distribution. The current summary saved in `artifacts/metrics/phase2_data_summary.json` reports the following:
-
-| Item | Value |
-| --- | ---: |
-| Positive rows | 60,000 |
-| Negative rows | 60,000 |
-| Total rows after negative construction | 120,000 |
-| Overall positive rate | 0.500 |
-| Feature count after preprocessing | 37 |
-| Active historical windows | 7d, 14d, 30d, 90d |
-| Train rows | 83,820 |
-| Validation rows | 17,999 |
-| Test rows | 17,999 |
+Synthetic negative-label construction is still applied at a 1:1 ratio after merging the yearly positive records, but the final row counts should now be regenerated from the full `2015-2025` dataset before the final report is frozen. Any legacy `2022-2024` artifact summaries should be treated as superseded benchmark outputs rather than as the final modeling setup.
 
 #### Label construction, negative construction, and imbalance handling
 
@@ -55,7 +43,13 @@ Because this construction remains an approximation, it should be presented trans
 
 #### Leakage control and train/validation/test split
 
-The full dataset is sorted chronologically and then split into **70% training**, **15% validation**, and **15% test** partitions. This chronological split reduces temporal leakage and better matches the intended deployment scenario, where models should forecast future periods using patterns learned from earlier periods. During preprocessing, rows with no available prior history in the minimum active window are dropped as cold-start observations. In the current run, this removed **180 rows** from the training partition and **1 row** each from the validation and test partitions.
+The full dataset is sorted chronologically before preprocessing, but the refactored training pipeline no longer relies on a simple percentage-based split for model evaluation. Instead, the intended evaluation setup is a **year-based temporal holdout**:
+
+- training data: **2015-2024**
+- holdout year: **2025**
+- validation/test split: the 2025 holdout is split chronologically into two consecutive parts
+
+This design better matches the deployment scenario, where models should learn from past years and then be evaluated on a genuinely future year. During preprocessing, rows with no available prior history in the minimum active window are dropped as cold-start observations.
 
 Leakage control is treated as a first-class preprocessing objective. In particular:
 
@@ -129,7 +123,7 @@ The training process can be summarized as follows:
 | --- | --- |
 | Data assembly | Merge yearly ZIP files into one Phase 2 CSV |
 | Preprocessing | Apply the shared `DataProcessor` pipeline |
-| Splitting | Use chronological 70/15/15 train-validation-test split |
+| Splitting | Train on 2015-2024 and split the 2025 holdout chronologically into validation and test |
 | Training | Fit each candidate model on the training split |
 | Selection | Choose the stronger configuration using validation AUROC |
 | Persistence | Save selected model files, prediction files, and metric tables |
@@ -147,7 +141,7 @@ The validation split is used to select the configuration with the strongest AURO
 
 ### 2.6 Selected configurations and current training outputs
 
-The best validation configurations in the current run are:
+The parameter grids below remain the active benchmark search space in the refactored pipeline:
 
 | Model | Selected configuration |
 | --- | --- |
@@ -156,7 +150,7 @@ The best validation configurations in the current run are:
 | Random Forest | `n_estimators = 200`, `max_depth = 16`, `min_samples_leaf = 4`, `max_samples = 0.35`, `max_features = sqrt` |
 | HistGradientBoosting | `learning_rate = 0.05`, `max_depth = 10`, `max_iter = 300`, `min_samples_leaf = 80`, `l2_regularization = 0.1` |
 
-The model artifacts and prediction files have been saved to:
+The model artifacts and prediction files are written to:
 
 - `artifacts/models/logistic_regression.pkl`
 - `artifacts/models/decision_tree.pkl`
@@ -164,13 +158,4 @@ The model artifacts and prediction files have been saved to:
 - `artifacts/models/hist_gradient_boosting.pkl`
 - `artifacts/metrics/predictions/`
 
-The current summary metrics are shown below. These numbers provide evidence that the training pipeline is working end-to-end and that the selected configurations produce stable, reproducible outputs for Milestone 2.
-
-| Model | Validation AUROC | Validation AUPRC | Test AUROC | Test AUPRC |
-| --- | ---: | ---: | ---: | ---: |
-| Logistic Regression | 0.579 | 0.549 | 0.577 | 0.550 |
-| Decision Tree | 0.581 | 0.545 | 0.581 | 0.552 |
-| Random Forest | 0.585 | 0.560 | 0.583 | 0.567 |
-| HistGradientBoosting | 0.589 | 0.563 | 0.591 | 0.573 |
-
-The additional Decision Tree baseline is useful for interpreting the ensemble results. It improves slightly over Logistic Regression on AUROC, but it remains below both Random Forest and HistGradientBoosting. This supports the claim that ensembling is adding value beyond a single tree, while also showing that the absolute performance gaps across all four baselines remain modest. HistGradientBoosting is therefore best described as the strongest **record-level** benchmark in the current run rather than as an overwhelmingly dominant model on every evaluation dimension.
+Any summary metrics from the earlier sampled `2022-2024` benchmark should now be treated as legacy artifacts. The final report should cite only the rerun metrics generated from the refactored `2015-2024` training scope plus `2025` holdout evaluation.

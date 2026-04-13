@@ -3,76 +3,76 @@
   "scoring_method": "permutation importance with average_precision on test split",
   "top_features": [
     {
-      "feature": "hour_sin",
-      "importance": 0.049623032453801105,
-      "importance_std": 9.794599166307713e-05
-    },
-    {
       "feature": "hour",
-      "importance": 0.030685583424238307,
-      "importance_std": 0.000940348041080681
+      "importance": 0.0346913037855547,
+      "importance_std": 0.0004988078801308452
     },
     {
-      "feature": "day_of_week",
-      "importance": 0.0016821059267421834,
-      "importance_std": 0.0003355379156683324
+      "feature": "hour_sin",
+      "importance": 0.014628606094938634,
+      "importance_std": 0.00017778965989793195
     },
     {
-      "feature": "dow_sin",
-      "importance": 0.001245139135250195,
-      "importance_std": 0.00042930275664103184
-    },
-    {
-      "feature": "X Coordinate",
-      "importance": -0.0009791508144801008,
-      "importance_std": 0.00031180178102588265
+      "feature": "District",
+      "importance": 0.008964089849072132,
+      "importance_std": 0.00021092267965349342
     },
     {
       "feature": "crimes_last_30d",
-      "importance": 0.0008031154478777891,
+      "importance": 0.006617802410739881,
+      "importance_std": 3.5384621339213404e-06
+    },
+    {
+      "feature": "crimes_last_14d",
+      "importance": 0.005909517159463662,
+      "importance_std": 1.8020734125975905e-05
+    },
+    {
+      "feature": "hour_cos",
+      "importance": 0.004314765186182079,
       "importance_std": 0.0
     },
     {
-      "feature": "Y Coordinate",
-      "importance": -0.0006379363293621765,
-      "importance_std": 0.0007711645036590031
+      "feature": "day_of_week",
+      "importance": 0.0035030037946174987,
+      "importance_std": 5.5639403668878455e-05
     },
     {
-      "feature": "Community Area",
-      "importance": -0.0004960246004383828,
-      "importance_std": 0.0003549560438696556
+      "feature": "crimes_last_90d",
+      "importance": 0.002950042272314368,
+      "importance_std": 0.0
     },
     {
-      "feature": "Beat",
-      "importance": 0.0004920648477025225,
-      "importance_std": 0.002636419381091476
+      "feature": "crimes_last_7d",
+      "importance": 0.0029101454629978153,
+      "importance_std": 0.00026331847600081484
     },
     {
-      "feature": "Latitude",
-      "importance": -0.0004483658424098813,
-      "importance_std": 0.0006450318064281273
+      "feature": "Ward",
+      "importance": 0.0017706465354583756,
+      "importance_std": 0.0002871899565640376
     }
   ],
   "feature_groups": [
     {
       "feature_group": "temporal",
-      "importance_abs": 0.08419774534801436,
-      "importance_share": 0.9426621884808081
-    },
-    {
-      "feature_group": "spatial",
-      "importance_abs": 0.0036479852994187657,
-      "importance_share": 0.04084216022272629
+      "importance_abs": 0.06023445830585694,
+      "importance_share": 0.659161962496907
     },
     {
       "feature_group": "historical",
-      "importance_abs": 0.001211487502350339,
-      "importance_share": 0.013563587190635516
+      "importance_abs": 0.018387507305515728,
+      "importance_share": 0.20121946377247374
+    },
+    {
+      "feature_group": "spatial",
+      "importance_abs": 0.012758395715437952,
+      "importance_share": 0.13961857373061942
     },
     {
       "feature_group": "missing_indicator",
-      "importance_abs": 0.0002618893490621499,
-      "importance_share": 0.0029320641058301514
+      "importance_abs": 0.0,
+      "importance_share": 0.0
     }
   ]
 }

@@ -132,7 +132,7 @@ Spatial signals are present but weaker when aggregated at the district level. Th
 
 Several limitations should be acknowledged clearly:
 
-- the benchmark uses a sampled `2022-2024` dataset for iteration speed and reproducibility
+- the refactored final benchmark should be rerun on the full `2015-2024` training window with `2025` held out for evaluation
 - the binary task depends on synthetic negative generation, which is a design choice for label construction rather than a naturally observed label structure
 - district-level spatial aggregation may be too coarse to reflect finer hotspot patterns
 - the model relies on historical recorded crime data, which may contain reporting bias or incomplete coverage

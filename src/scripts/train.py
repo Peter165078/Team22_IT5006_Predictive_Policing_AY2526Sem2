@@ -1,13 +1,17 @@
 """
-Phase 2 training pipeline for predictive policing.
+Predictive-model training pipeline for the Chicago crime project.
 
 This script:
-1. Builds a raw training CSV from the yearly Chicago archives if needed.
+1. Builds a raw modeling CSV from the yearly Chicago archives if needed.
 2. Applies the shared DataProcessor pipeline.
 3. Trains multiple models and saves reproducible artifacts.
 
+Default temporal setup:
+    - train on 2015 through 2024
+    - split 2025 chronologically into validation and test
+
 Example:
-    python src/scripts/train.py --start-year 2022 --end-year 2024
+    python src/scripts/train.py --start-year 2015 --end-year 2025
 """
 from __future__ import annotations
 
@@ -39,8 +43,9 @@ PROJECT_ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(PROJECT_ROOT))
 os.environ.setdefault("LOKY_MAX_CPU_COUNT", str(os.cpu_count() or 1))
 
-from src.data.dataset_builder import BuildSummary, build_phase2_dataset
+from src.data.dataset_builder import BuildSummary, build_district_hour_dataset
 from src.data.processor import DataProcessor
+from src.data.split_strategy import build_year_holdout_splits
 
 warnings.filterwarnings("ignore")
 
@@ -73,8 +78,8 @@ FEATURE_COLUMNS_PATH = METRICS_DIR / "phase2_feature_columns.txt"
 
 SKLEARN_MODEL_GRIDS: dict[str, list[dict]] = {
     "logistic_regression": [
-        {"C": 0.5, "max_iter": 400},
-        {"C": 1.0, "max_iter": 600},
+        {"C": 0.5, "max_iter": 200},
+        {"C": 1.0, "max_iter": 300},
     ],
     "decision_tree": [
         {"max_depth": 10, "min_samples_leaf": 50, "ccp_alpha": 0.0},
@@ -82,33 +87,33 @@ SKLEARN_MODEL_GRIDS: dict[str, list[dict]] = {
     ],
     "random_forest": [
         {
-            "n_estimators": 200,
-            "max_depth": 16,
-            "min_samples_leaf": 4,
+            "n_estimators": 64,
+            "max_depth": 14,
+            "min_samples_leaf": 20,
             "max_features": "sqrt",
-            "max_samples": 0.35,
+            "max_samples": 0.08,
         },
         {
-            "n_estimators": 300,
-            "max_depth": 20,
-            "min_samples_leaf": 2,
+            "n_estimators": 96,
+            "max_depth": 16,
+            "min_samples_leaf": 10,
             "max_features": "sqrt",
-            "max_samples": 0.25,
+            "max_samples": 0.12,
         },
     ],
     "hist_gradient_boosting": [
         {
             "learning_rate": 0.08,
             "max_depth": 8,
-            "max_iter": 200,
-            "min_samples_leaf": 100,
+            "max_iter": 120,
+            "min_samples_leaf": 200,
             "l2_regularization": 0.0,
         },
         {
             "learning_rate": 0.05,
             "max_depth": 10,
-            "max_iter": 300,
-            "min_samples_leaf": 80,
+            "max_iter": 180,
+            "min_samples_leaf": 150,
             "l2_regularization": 0.1,
         },
     ],
@@ -141,7 +146,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--data-path",
         type=Path,
-        default=PROJECT_ROOT / "data" / "raw" / "chicago_crime_2022_2024_phase2.csv",
+        default=PROJECT_ROOT / "data" / "raw" / "chicago_crime_district_hour_2015_2025_phase2.csv",
         help="CSV used by the DataProcessor.",
     )
     parser.add_argument(
@@ -150,13 +155,13 @@ def parse_args() -> argparse.Namespace:
         default=PROJECT_ROOT / "apps" / "dashboard" / "split_data_by_year",
         help="Yearly source archives used when the raw CSV does not exist.",
     )
-    parser.add_argument("--start-year", type=int, default=2022)
-    parser.add_argument("--end-year", type=int, default=2024)
+    parser.add_argument("--start-year", type=int, default=2015)
+    parser.add_argument("--end-year", type=int, default=2025)
     parser.add_argument(
         "--max-rows-per-year",
         type=int,
-        default=20000,
-        help="Cap per year to keep local runs practical. Use 0 for full-year data.",
+        default=0,
+        help="Cap per source year for debugging only. Use 0 for full-year data.",
     )
     parser.add_argument(
         "--rebuild-data",
@@ -168,6 +173,30 @@ def parse_args() -> argparse.Namespace:
         type=float,
         default=1.0,
         help="Negative-to-positive ratio used by DataProcessor.",
+    )
+    parser.add_argument(
+        "--train-start-year",
+        type=int,
+        default=2015,
+        help="First year included in model training.",
+    )
+    parser.add_argument(
+        "--train-end-year",
+        type=int,
+        default=2024,
+        help="Last year included in model training.",
+    )
+    parser.add_argument(
+        "--holdout-year",
+        type=int,
+        default=2025,
+        help="Year reserved for validation and test.",
+    )
+    parser.add_argument(
+        "--holdout-val-fraction",
+        type=float,
+        default=0.5,
+        help="Fraction of the holdout year used for validation; the remainder is test.",
     )
     parser.add_argument(
         "--models",
@@ -244,7 +273,7 @@ def ensure_dataset(args: argparse.Namespace) -> BuildSummary | None:
     max_rows_per_year = None if args.max_rows_per_year == 0 else args.max_rows_per_year
     if args.data_path.exists() and not args.rebuild_data:
         return None
-    return build_phase2_dataset(
+    return build_district_hour_dataset(
         source_dir=args.source_dir,
         output_path=args.data_path,
         start_year=args.start_year,
@@ -254,9 +283,31 @@ def ensure_dataset(args: argparse.Namespace) -> BuildSummary | None:
     )
 
 
-def prepare_data(data_path: Path, neg_ratio: float) -> tuple[pd.DataFrame, ...]:
+def prepare_data(
+    data_path: Path,
+    neg_ratio: float,
+    *,
+    train_start_year: int,
+    train_end_year: int,
+    holdout_year: int,
+    holdout_val_fraction: float,
+) -> tuple[pd.DataFrame, ...]:
     processor = DataProcessor(str(data_path), neg_ratio=neg_ratio, random_state=RANDOM_STATE)
     processor.load_and_split()
+
+    train_idx, val_idx, test_idx, split_summary = build_year_holdout_splits(
+        processor.raw_data,
+        train_start_year=train_start_year,
+        train_end_year=train_end_year,
+        holdout_year=holdout_year,
+        holdout_val_fraction=holdout_val_fraction,
+    )
+    processor.set_split_indices(
+        train_idx,
+        val_idx,
+        test_idx,
+        split_label=f"train {train_start_year}-{train_end_year}, holdout {holdout_year}",
+    )
 
     X_train, y_train = processor.fit_transform_train()
     X_val, y_val = processor.transform(processor.val_idx)
@@ -267,11 +318,19 @@ def prepare_data(data_path: Path, neg_ratio: float) -> tuple[pd.DataFrame, ...]:
 
     summary = {
         "data_path": str(data_path),
+        "split_strategy": split_summary.split_strategy,
+        "train_start_year": train_start_year,
+        "train_end_year": train_end_year,
+        "holdout_year": holdout_year,
+        "holdout_val_fraction": holdout_val_fraction,
         "raw_rows_after_negative_sampling": int(len(processor.raw_data)),
         "positive_rows": int(processor.labels.sum()),
         "negative_rows": int(len(processor.labels) - processor.labels.sum()),
         "overall_positive_rate": float(processor.labels.mean()),
         "active_historical_windows": list(processor.hist_windows.keys()),
+        "train_rows_before_hist_drop": split_summary.train_rows_before_hist_drop,
+        "val_rows_before_hist_drop": split_summary.val_rows_before_hist_drop,
+        "test_rows_before_hist_drop": split_summary.test_rows_before_hist_drop,
         "feature_count": int(X_train.shape[1]),
         "train_rows": int(len(X_train)),
         "val_rows": int(len(X_val)),
@@ -288,8 +347,7 @@ def prepare_data(data_path: Path, neg_ratio: float) -> tuple[pd.DataFrame, ...]:
 def build_sklearn_model(model_name: str, params: dict) -> object:
     if model_name == "logistic_regression":
         return LogisticRegression(
-            solver="saga",
-            n_jobs=-1,
+            solver="lbfgs",
             class_weight="balanced",
             random_state=RANDOM_STATE,
             **params,
@@ -338,11 +396,19 @@ def run_sklearn_candidates(
     best_payload: tuple[float, object, dict, np.ndarray, np.ndarray] | None = None
 
     for trial_index, params in enumerate(SKLEARN_MODEL_GRIDS[model_name], start=1):
+        print(
+            f"\n[{model_name}] trial {trial_index} / {len(SKLEARN_MODEL_GRIDS[model_name])} "
+            f"params={params}"
+        )
         model = build_sklearn_model(model_name, params)
         model.fit(X_train, y_train)
 
         val_prob = predict_probabilities(model, X_val)
         val_metrics = evaluate_split(y_val.to_numpy(), val_prob)
+        print(
+            f"[{model_name}] validation AUROC={val_metrics['auroc']:.4f} "
+            f"AUPRC={val_metrics['auprc']:.4f}"
+        )
         trials.append(
             {
                 "model": model_name,
@@ -360,6 +426,7 @@ def run_sklearn_candidates(
 
     assert best_payload is not None
     _, best_model, best_params, best_val_prob, best_test_prob = best_payload
+    print(f"[{model_name}] selected params={best_params}")
     save_pickle(model_name, best_model)
 
     for split_name, y_split, y_prob in [
@@ -622,7 +689,14 @@ def main() -> None:
     if build_summary is not None:
         save_json(METRICS_DIR / "phase2_dataset_build_summary.json", build_summary.to_dict())
 
-    X_train, y_train, X_val, y_val, X_test, y_test = prepare_data(args.data_path, args.neg_ratio)
+    X_train, y_train, X_val, y_val, X_test, y_test = prepare_data(
+        args.data_path,
+        args.neg_ratio,
+        train_start_year=args.train_start_year,
+        train_end_year=args.train_end_year,
+        holdout_year=args.holdout_year,
+        holdout_val_fraction=args.holdout_val_fraction,
+    )
 
     trial_rows: list[dict] = []
     metric_rows: list[dict] = []
@@ -644,6 +718,12 @@ def main() -> None:
 
     manifest = {
         "data_path": str(args.data_path),
+        "start_year": args.start_year,
+        "end_year": args.end_year,
+        "train_start_year": args.train_start_year,
+        "train_end_year": args.train_end_year,
+        "holdout_year": args.holdout_year,
+        "holdout_val_fraction": args.holdout_val_fraction,
         "models_trained": args.models,
         "dataset_build_summary_present": build_summary is not None,
         "metrics_path": str(MODEL_METRICS_PATH),

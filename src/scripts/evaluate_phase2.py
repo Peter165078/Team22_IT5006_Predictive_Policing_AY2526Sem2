@@ -1,5 +1,5 @@
 """
-Compute spatial and temporal evaluation summaries for saved Phase 2 predictions.
+Compute spatial and temporal evaluation summaries for saved model predictions.
 
 This script reconstructs the aligned validation/test metadata after preprocessing,
 joins it with the saved prediction files, and exports compact spatial-temporal
@@ -17,12 +17,17 @@ PROJECT_ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(PROJECT_ROOT))
 
 from src.data.processor import DataProcessor
+from src.data.split_strategy import build_year_holdout_splits
 
 RANDOM_STATE = 42
-DATA_PATH = PROJECT_ROOT / "data" / "raw" / "chicago_crime_2022_2024_phase2.csv"
+DATA_PATH = PROJECT_ROOT / "data" / "raw" / "chicago_crime_district_hour_2015_2025_phase2.csv"
 PREDICTIONS_DIR = PROJECT_ROOT / "artifacts" / "metrics" / "predictions"
 OUTPUT_CSV = PROJECT_ROOT / "artifacts" / "metrics" / "phase2_spatiotemporal_metrics.csv"
 OUTPUT_JSON = PROJECT_ROOT / "artifacts" / "metrics" / "phase2_spatiotemporal_summary.json"
+TRAIN_START_YEAR = 2015
+TRAIN_END_YEAR = 2024
+HOLDOUT_YEAR = 2025
+HOLDOUT_VAL_FRACTION = 0.5
 
 MODELS = [
     "logistic_regression",
@@ -121,6 +126,19 @@ def temporal_metrics(df: pd.DataFrame) -> dict[str, float]:
 def main() -> None:
     processor = DataProcessor(str(DATA_PATH), neg_ratio=1.0, random_state=RANDOM_STATE)
     processor.load_and_split()
+    train_idx, val_idx, test_idx, _ = build_year_holdout_splits(
+        processor.raw_data,
+        train_start_year=TRAIN_START_YEAR,
+        train_end_year=TRAIN_END_YEAR,
+        holdout_year=HOLDOUT_YEAR,
+        holdout_val_fraction=HOLDOUT_VAL_FRACTION,
+    )
+    processor.set_split_indices(
+        train_idx,
+        val_idx,
+        test_idx,
+        split_label=f"train {TRAIN_START_YEAR}-{TRAIN_END_YEAR}, holdout {HOLDOUT_YEAR}",
+    )
     processor.fit_transform_train()
 
     metadata_by_split = {

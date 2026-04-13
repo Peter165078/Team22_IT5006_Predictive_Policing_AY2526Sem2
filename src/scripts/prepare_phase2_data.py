@@ -1,8 +1,12 @@
 """
-Build a single raw CSV for Phase 2 training from the yearly Chicago archives.
+Build a single raw modeling CSV from the yearly Chicago archives.
+
+Default temporal coverage:
+    - include 2015 through 2025
+    - keep full-year data unless an explicit debug cap is passed
 
 Example:
-    python src/scripts/prepare_phase2_data.py --start-year 2022 --end-year 2024
+    python src/scripts/prepare_phase2_data.py --start-year 2015 --end-year 2025
 """
 from __future__ import annotations
 
@@ -14,7 +18,7 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(PROJECT_ROOT))
 
-from src.data.dataset_builder import build_phase2_dataset
+from src.data.dataset_builder import build_district_hour_dataset
 
 
 def parse_args() -> argparse.Namespace:
@@ -28,16 +32,16 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--output-path",
         type=Path,
-        default=PROJECT_ROOT / "data" / "raw" / "chicago_crime_2022_2024_phase2.csv",
+        default=PROJECT_ROOT / "data" / "raw" / "chicago_crime_district_hour_2015_2025_phase2.csv",
         help="Destination CSV used by the training pipeline.",
     )
-    parser.add_argument("--start-year", type=int, default=2022)
-    parser.add_argument("--end-year", type=int, default=2024)
+    parser.add_argument("--start-year", type=int, default=2015)
+    parser.add_argument("--end-year", type=int, default=2025)
     parser.add_argument(
         "--max-rows-per-year",
         type=int,
-        default=20000,
-        help="Optional cap per year for faster local iteration.",
+        default=0,
+        help="Optional cap per source year for debugging only. Use 0 for the full year.",
     )
     parser.add_argument(
         "--overwrite",
@@ -49,12 +53,12 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> None:
     args = parse_args()
-    summary = build_phase2_dataset(
+    summary = build_district_hour_dataset(
         source_dir=args.source_dir,
         output_path=args.output_path,
         start_year=args.start_year,
         end_year=args.end_year,
-        max_rows_per_year=args.max_rows_per_year,
+        max_rows_per_year=None if args.max_rows_per_year == 0 else args.max_rows_per_year,
         overwrite=args.overwrite,
     )
     print(json.dumps(summary.to_dict(), indent=2))

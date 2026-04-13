@@ -1,66 +1,66 @@
 {
   "logistic_regression": {
     "val": {
-      "district_correlation": -0.1443500199901178,
-      "top_5_overlap": 0.2,
-      "top_10_overlap": 0.4,
-      "hourly_correlation": 0.8646992701812477,
-      "day_of_week_correlation": -0.5294506695877169
+      "district_correlation": 0.9934152638778339,
+      "top_5_overlap": 1.0,
+      "top_10_overlap": 1.0,
+      "hourly_correlation": 0.8483494828863724,
+      "day_of_week_correlation": 0.9415259314232132
     },
     "test": {
-      "district_correlation": -0.059114903983017754,
-      "top_5_overlap": 0.2,
-      "top_10_overlap": 0.5,
-      "hourly_correlation": 0.827010086418647,
-      "day_of_week_correlation": 0.20799179851860689
+      "district_correlation": 0.9942064326805033,
+      "top_5_overlap": 1.0,
+      "top_10_overlap": 1.0,
+      "hourly_correlation": 0.8541772426643438,
+      "day_of_week_correlation": 0.7218069525699558
     }
   },
   "decision_tree": {
     "val": {
-      "district_correlation": -0.3855127913612685,
-      "top_5_overlap": 0.4,
-      "top_10_overlap": 0.3,
-      "hourly_correlation": 0.9320521368975319,
-      "day_of_week_correlation": -0.09741698153351308
+      "district_correlation": 0.9916305715256708,
+      "top_5_overlap": 0.8,
+      "top_10_overlap": 1.0,
+      "hourly_correlation": 0.9874343145591936,
+      "day_of_week_correlation": 0.8433791536905942
     },
     "test": {
-      "district_correlation": 0.0002114108169407446,
-      "top_5_overlap": 0.4,
-      "top_10_overlap": 0.5,
-      "hourly_correlation": 0.9305062017557587,
-      "day_of_week_correlation": 0.17819088305310762
+      "district_correlation": 0.9928995724445102,
+      "top_5_overlap": 0.8,
+      "top_10_overlap": 1.0,
+      "hourly_correlation": 0.9882017725680383,
+      "day_of_week_correlation": 0.4948526226667347
     }
   },
   "random_forest": {
     "val": {
-      "district_correlation": -0.12116884343590557,
-      "top_5_overlap": 0.2,
-      "top_10_overlap": 0.5,
-      "hourly_correlation": 0.968840126259665,
-      "day_of_week_correlation": -0.17775525727368177
+      "district_correlation": 0.9922865865216657,
+      "top_5_overlap": 1.0,
+      "top_10_overlap": 1.0,
+      "hourly_correlation": 0.9912101991821926,
+      "day_of_week_correlation": 0.972025144765553
     },
     "test": {
-      "district_correlation": -0.16706875863187884,
-      "top_5_overlap": 0.2,
-      "top_10_overlap": 0.3,
-      "hourly_correlation": 0.9760141522011313,
-      "day_of_week_correlation": -0.16975900278129114
+      "district_correlation": 0.9935860048920345,
+      "top_5_overlap": 0.8,
+      "top_10_overlap": 1.0,
+      "hourly_correlation": 0.9910573716941223,
+      "day_of_week_correlation": 0.5931676243169705
     }
   },
   "hist_gradient_boosting": {
     "val": {
-      "district_correlation": -0.18580063189967413,
-      "top_5_overlap": 0.0,
-      "top_10_overlap": 0.4,
-      "hourly_correlation": 0.9738971885020741,
-      "day_of_week_correlation": -0.38447189089671985
+      "district_correlation": 0.999615427407601,
+      "top_5_overlap": 1.0,
+      "top_10_overlap": 1.0,
+      "hourly_correlation": 0.99037952995075,
+      "day_of_week_correlation": 0.9924144074765753
     },
     "test": {
-      "district_correlation": -0.18139508638954896,
-      "top_5_overlap": 0.0,
-      "top_10_overlap": 0.2,
-      "hourly_correlation": 0.971843861344495,
-      "day_of_week_correlation": 0.5047315115930342
+      "district_correlation": 0.9995617439517568,
+      "top_5_overlap": 1.0,
+      "top_10_overlap": 1.0,
+      "hourly_correlation": 0.990043390912027,
+      "day_of_week_correlation": 0.7311144663511395
     }
   }
 }

@@ -1,0 +1,1161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Team 22 | IT5006 Predictive Policing</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-dark: #09111f;
+      --bg-white: #f8fafc;
+      --panel-blue: #2f5cff;
+      --panel-blue-soft: #dfe8ff;
+      --panel-cyan: #74d7ff;
+      --text-dark: #0f172a;
+      --text-light: #f8fafc;
+      --text-muted: #526077;
+      --accent-red: #ef4444;
+      --accent-green: #0f9d69;
+      --accent-yellow: #d97706;
+      --line: rgba(15, 23, 42, 0.12);
+      --shadow: 0 24px 60px rgba(7, 16, 32, 0.18);
+      --slide-w: 100vw;
+      --slide-h: 100vh;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: "Manrope", sans-serif;
+      background: linear-gradient(135deg, #0a1222 0%, #111d33 100%);
+      color: var(--text-dark);
+      overflow: hidden;
+    }
+
+    .deck {
+      position: relative;
+      width: 100vw;
+      height: 100vh;
+    }
+
+    .slide {
+      position: absolute;
+      inset: 0;
+      width: var(--slide-w);
+      height: var(--slide-h);
+      display: grid;
+      grid-template-columns: minmax(180px, 19vw) 1fr;
+      background: var(--bg-white);
+      opacity: 0;
+      transform: translateX(6%);
+      transition: opacity 480ms ease, transform 520ms ease;
+      pointer-events: none;
+    }
+
+    .slide.active {
+      opacity: 1;
+      transform: translateX(0);
+      pointer-events: auto;
+    }
+
+    .rail {
+      background:
+        radial-gradient(circle at 16% 15%, rgba(116, 215, 255, 0.22), transparent 28%),
+        linear-gradient(180deg, #12213a 0%, #0b1221 100%);
+      color: var(--text-light);
+      padding: clamp(24px, 3vw, 40px);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      border-right: 1px solid rgba(255,255,255,0.1);
+    }
+
+    .rail-top {
+      display: grid;
+      gap: 14px;
+    }
+
+    .rail .eyebrow {
+      font-family: "Space Mono", monospace;
+      font-size: clamp(0.72rem, 0.9vw, 0.88rem);
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: rgba(248, 250, 252, 0.75);
+    }
+
+    .slide-no {
+      font-size: clamp(2.2rem, 4vw, 4rem);
+      font-weight: 800;
+      line-height: 0.92;
+    }
+
+    .track {
+      display: grid;
+      gap: 10px;
+      font-size: clamp(0.82rem, 1vw, 0.95rem);
+      color: rgba(248, 250, 252, 0.72);
+    }
+
+    .track span.active-step {
+      color: #fff;
+      font-weight: 700;
+    }
+
+    .rail-bottom {
+      display: grid;
+      gap: 12px;
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      width: fit-content;
+      padding: 8px 12px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      font-size: 0.86rem;
+      color: rgba(248, 250, 252, 0.9);
+    }
+
+    .content {
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      padding: clamp(28px, 4vw, 54px);
+      overflow: hidden;
+    }
+
+    .topline {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .topline .kicker {
+      font-family: "Space Mono", monospace;
+      text-transform: uppercase;
+      letter-spacing: 0.14em;
+      font-size: 0.78rem;
+      color: #6d7d97;
+    }
+
+    .topline .meta {
+      font-size: 0.9rem;
+      color: #60708a;
+    }
+
+    .body {
+      display: grid;
+      align-content: start;
+      gap: clamp(18px, 2vh, 24px);
+      padding-top: clamp(20px, 3vh, 28px);
+      overflow: hidden;
+    }
+
+    h1, h2 {
+      font-weight: 800;
+      color: var(--text-dark);
+      line-height: 0.95;
+      max-width: 14ch;
+    }
+
+    h1 {
+      font-size: clamp(2.6rem, 6vw, 5.4rem);
+    }
+
+    h2 {
+      font-size: clamp(2.1rem, 4.5vw, 4rem);
+    }
+
+    .lede {
+      max-width: 68ch;
+      font-size: clamp(1rem, 1.5vw, 1.22rem);
+      line-height: 1.7;
+      color: var(--text-muted);
+    }
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1.05fr 0.95fr;
+      gap: 22px;
+      align-items: start;
+    }
+
+    .grid-3 {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 18px;
+      align-items: stretch;
+    }
+
+    .card {
+      background: #fff;
+      border: 1px solid rgba(15, 23, 42, 0.08);
+      border-radius: 22px;
+      padding: 20px 22px;
+      box-shadow: var(--shadow);
+    }
+
+    .accent-card {
+      background:
+        linear-gradient(140deg, rgba(47, 92, 255, 0.12), rgba(116, 215, 255, 0.18)),
+        #ffffff;
+      border: 1px solid rgba(47, 92, 255, 0.16);
+    }
+
+    .card h3 {
+      font-size: 1.06rem;
+      margin-bottom: 12px;
+      color: var(--text-dark);
+    }
+
+    ul.clean {
+      list-style: none;
+      display: grid;
+      gap: 12px;
+    }
+
+    ul.clean li {
+      position: relative;
+      padding-left: 18px;
+      color: #334155;
+      line-height: 1.55;
+      font-size: 0.98rem;
+    }
+
+    ul.clean li::before {
+      content: "";
+      position: absolute;
+      left: 0;
+      top: 0.62em;
+      width: 8px;
+      height: 8px;
+      border-radius: 999px;
+      background: var(--panel-blue);
+    }
+
+    .big-quote {
+      font-size: clamp(1.4rem, 2vw, 2.15rem);
+      line-height: 1.32;
+      font-weight: 700;
+      color: var(--text-dark);
+      max-width: 20ch;
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+    }
+
+    .stat {
+      border-radius: 18px;
+      padding: 18px;
+      background: #fff;
+      border: 1px solid rgba(15, 23, 42, 0.08);
+      box-shadow: 0 14px 34px rgba(15, 23, 42, 0.08);
+    }
+
+    .stat .label {
+      color: #64748b;
+      font-size: 0.84rem;
+      margin-bottom: 10px;
+    }
+
+    .stat .value {
+      font-size: 1.8rem;
+      font-weight: 800;
+      color: #0f172a;
+    }
+
+    .stat .sub {
+      margin-top: 8px;
+      font-size: 0.84rem;
+      color: #4b5f7c;
+      line-height: 1.45;
+    }
+
+    .pipeline {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 14px;
+      align-items: center;
+    }
+
+    .stage {
+      position: relative;
+      min-height: 156px;
+      border-radius: 20px;
+      padding: 18px 18px 22px;
+      background: linear-gradient(180deg, #fff, #f6f9ff);
+      border: 1px solid rgba(47, 92, 255, 0.12);
+      box-shadow: 0 16px 36px rgba(23, 37, 84, 0.09);
+    }
+
+    .stage .num {
+      display: inline-flex;
+      width: 34px;
+      height: 34px;
+      align-items: center;
+      justify-content: center;
+      border-radius: 999px;
+      background: var(--panel-blue);
+      color: #fff;
+      font-weight: 800;
+      margin-bottom: 14px;
+    }
+
+    .stage h3 {
+      font-size: 1rem;
+      margin-bottom: 8px;
+    }
+
+    .stage p {
+      color: #5b677d;
+      line-height: 1.5;
+      font-size: 0.92rem;
+    }
+
+    .arrow {
+      justify-self: center;
+      font-size: 1.65rem;
+      color: var(--panel-blue);
+      font-weight: 800;
+    }
+
+    .table {
+      width: 100%;
+      border-collapse: collapse;
+      overflow: hidden;
+      border-radius: 20px;
+      border: 1px solid rgba(15, 23, 42, 0.08);
+      box-shadow: var(--shadow);
+      background: #fff;
+    }
+
+    .table th,
+    .table td {
+      padding: 14px 16px;
+      text-align: left;
+      border-bottom: 1px solid rgba(15, 23, 42, 0.06);
+    }
+
+    .table th {
+      background: #eff4ff;
+      color: #163057;
+      font-size: 0.88rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    .table td {
+      font-size: 0.98rem;
+      color: #22314b;
+    }
+
+    .tag {
+      display: inline-flex;
+      align-items: center;
+      border-radius: 999px;
+      padding: 6px 10px;
+      font-size: 0.78rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    .tag.best {
+      background: rgba(15, 157, 105, 0.12);
+      color: var(--accent-green);
+    }
+
+    .tag.mid {
+      background: rgba(217, 119, 6, 0.12);
+      color: var(--accent-yellow);
+    }
+
+    .tag.warn {
+      background: rgba(239, 68, 68, 0.12);
+      color: var(--accent-red);
+    }
+
+    .bars {
+      display: grid;
+      gap: 14px;
+    }
+
+    .bar-row {
+      display: grid;
+      grid-template-columns: 180px 1fr 90px;
+      gap: 14px;
+      align-items: center;
+    }
+
+    .bar-label {
+      font-weight: 700;
+      color: #243349;
+    }
+
+    .bar-track {
+      height: 16px;
+      border-radius: 999px;
+      background: #e9eef8;
+      overflow: hidden;
+    }
+
+    .bar-fill {
+      height: 100%;
+      border-radius: 999px;
+      background: linear-gradient(90deg, #2f5cff, #74d7ff);
+    }
+
+    .bar-value {
+      text-align: right;
+      font-family: "Space Mono", monospace;
+      color: #426081;
+      font-size: 0.9rem;
+    }
+
+    .callout {
+      border-left: 5px solid var(--panel-blue);
+      padding: 16px 18px;
+      background: #eef4ff;
+      border-radius: 0 18px 18px 0;
+      color: #243a60;
+      line-height: 1.6;
+      max-width: 70ch;
+    }
+
+    .footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-top: 16px;
+      border-top: 1px solid var(--line);
+      font-size: 0.88rem;
+      color: #60708a;
+    }
+
+    .kbd {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 10px;
+      border-radius: 12px;
+      background: #f3f6fb;
+      border: 1px solid rgba(15, 23, 42, 0.08);
+      font-family: "Space Mono", monospace;
+      font-size: 0.78rem;
+    }
+
+    .progress {
+      position: fixed;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      height: 6px;
+      background: rgba(255,255,255,0.1);
+      z-index: 20;
+    }
+
+    .progress-bar {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, #74d7ff, #2f5cff);
+      transition: width 260ms ease;
+    }
+
+    .fade-up {
+      animation: fadeUp 700ms ease both;
+    }
+
+    .fade-up.delay-1 { animation-delay: 100ms; }
+    .fade-up.delay-2 { animation-delay: 180ms; }
+    .fade-up.delay-3 { animation-delay: 260ms; }
+
+    @keyframes fadeUp {
+      from {
+        opacity: 0;
+        transform: translateY(18px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @media (max-width: 1100px) {
+      .slide {
+        grid-template-columns: 1fr;
+        grid-template-rows: auto 1fr;
+      }
+
+      .rail {
+        min-height: 130px;
+      }
+
+      .grid-2,
+      .grid-3,
+      .stats,
+      .pipeline {
+        grid-template-columns: 1fr;
+      }
+
+      .arrow {
+        transform: rotate(90deg);
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="deck" id="deck">
+    <section class="slide active" data-step="1">
+      <aside class="rail">
+        <div class="rail-top">
+          <div class="eyebrow">Team 22 · IT5006</div>
+          <div class="slide-no">01</div>
+          <div class="track">
+            <span class="active-step">Title</span>
+            <span>Problem</span>
+            <span>Data</span>
+            <span>Pipeline</span>
+          </div>
+        </div>
+        <div class="rail-bottom">
+          <div class="pill">10 min presentation</div>
+          <div class="pill">5 min Q&amp;A</div>
+        </div>
+      </aside>
+      <div class="content">
+        <div class="topline">
+          <div class="kicker">Predictive Policing Proof-of-Concept</div>
+          <div class="meta">Chicago crime risk estimation · 2015-2024 train, 2025 holdout</div>
+        </div>
+        <div class="body">
+          <h1 class="fade-up">Chicago Crime Intel</h1>
+          <p class="lede fade-up delay-1">
+            An end-to-end project that turns yearly Chicago crime archives into a reproducible
+            modeling pipeline, benchmark comparison, and deployed Streamlit demo for
+            time-location crime occurrence prediction.
+          </p>
+          <div class="stats fade-up delay-2">
+            <div class="stat">
+              <div class="label">Task</div>
+              <div class="value">Binary</div>
+              <div class="sub">Estimate whether a crime occurs in a space-time instance.</div>
+            </div>
+            <div class="stat">
+              <div class="label">Modeling Years</div>
+              <div class="value">2015-24</div>
+              <div class="sub">Ten training years with an explicit 2025 holdout for evaluation.</div>
+            </div>
+            <div class="stat">
+              <div class="label">Holdout</div>
+              <div class="value">2025</div>
+              <div class="sub">Chronologically split into validation and test after preprocessing.</div>
+            </div>
+            <div class="stat">
+              <div class="label">Best Benchmark</div>
+              <div class="value">HGB</div>
+              <div class="sub">HistGradientBoosting performed slightly best overall.</div>
+            </div>
+          </div>
+        </div>
+        <div class="footer">
+          <span>Presenters: replace with your names before submission</span>
+          <span class="kbd">Arrow keys / Space / J-K</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="slide" data-step="2">
+      <aside class="rail">
+        <div class="rail-top">
+          <div class="eyebrow">Problem Setup</div>
+          <div class="slide-no">02</div>
+          <div class="track">
+            <span>Title</span>
+            <span class="active-step">Problem</span>
+            <span>Data</span>
+            <span>Pipeline</span>
+          </div>
+        </div>
+        <div class="rail-bottom">
+          <div class="pill">Core message</div>
+          <div class="pill">Decision support, not automation</div>
+        </div>
+      </aside>
+      <div class="content">
+        <div class="topline">
+          <div class="kicker">Problem Definition</div>
+          <div class="meta">What exactly are we predicting?</div>
+        </div>
+        <div class="body">
+          <div class="grid-2">
+            <div class="accent-card card fade-up">
+              <h2>Estimate<br/>P(Y = 1 | X)</h2>
+              <p class="lede" style="max-width: 46ch; margin-top: 16px;">
+                Given an observed feature vector <strong>X</strong> for a specific
+                time-location instance, predict the probability that at least one
+                crime incident occurs.
+              </p>
+            </div>
+            <div class="card fade-up delay-1">
+              <h3>How we define the labels</h3>
+              <ul class="clean">
+                <li><strong>Y = 1</strong>: at least one crime incident occurs in the space-time unit.</li>
+                <li><strong>Y = 0</strong>: no recorded incident occurs in that space-time unit.</li>
+                <li>This is <strong>occurrence prediction</strong>, not crime-type classification.</li>
+                <li>The system is framed as a <strong>planning aid</strong>, not an autonomous enforcement tool.</li>
+              </ul>
+            </div>
+          </div>
+          <div class="callout fade-up delay-2">
+            We deliberately avoid overstating the task. The project aims to produce a modest,
+            interpretable relative-risk signal that can support timing review and localized monitoring.
+          </div>
+        </div>
+        <div class="footer">
+          <span>Recommended speaker cue: keep this slide under 60 seconds.</span>
+          <span>2 / 9</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="slide" data-step="3">
+      <aside class="rail">
+        <div class="rail-top">
+          <div class="eyebrow">Data & Constraints</div>
+          <div class="slide-no">03</div>
+          <div class="track">
+            <span>Problem</span>
+            <span class="active-step">Data</span>
+            <span>Features</span>
+            <span>Models</span>
+          </div>
+        </div>
+        <div class="rail-bottom">
+          <div class="pill">Main challenge</div>
+          <div class="pill">Natural negatives via district-hour units</div>
+        </div>
+      </aside>
+      <div class="content">
+        <div class="topline">
+          <div class="kicker">Dataset and Modeling Challenge</div>
+          <div class="meta">Source: yearly Chicago crime archives</div>
+        </div>
+        <div class="body">
+          <div class="grid-2">
+            <div class="card fade-up">
+              <h3>What goes into the training set</h3>
+              <ul class="clean">
+                <li>Input data comes from yearly ZIP archives stored under <code>apps/dashboard/split_data_by_year/</code>.</li>
+                <li>A shared builder merges yearly archives into one modeling CSV.</li>
+                <li>The refactored default uses the last ten years ending in <strong>2024</strong> for model development.</li>
+                <li>The year <strong>2025</strong> is reserved as an explicit chronological holdout.</li>
+              </ul>
+            </div>
+            <div class="card fade-up delay-1">
+              <h3>The hardest data issue</h3>
+              <div class="big-quote">
+                Event rows contain observed crimes only, so we refactored the task around explicit district-hour units.
+              </div>
+              <p class="lede" style="margin-top: 18px; max-width: 42ch; font-size: 0.98rem;">
+                In the refactored pipeline, each district-hour cell becomes one training example.
+                Cells with incidents are labeled <code>Y = 1</code>, and cells with no incidents are labeled
+                <code>Y = 0</code>. This gives us natural negatives without copying event rows.
+              </p>
+            </div>
+          </div>
+          <div class="callout fade-up delay-2">
+            This is one of the most important points for Q&amp;A. The key idea is that the final model is trained on explicit space-time units, not on copied event rows with synthetic labels.
+          </div>
+        </div>
+        <div class="footer">
+          <span>Recommended speaker cue: explain why this is necessary for binary classification.</span>
+          <span>3 / 9</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="slide" data-step="4">
+      <aside class="rail">
+        <div class="rail-top">
+          <div class="eyebrow">Pipeline</div>
+          <div class="slide-no">04</div>
+          <div class="track">
+            <span>Data</span>
+            <span class="active-step">Pipeline</span>
+            <span>Evaluation</span>
+            <span>Demo</span>
+          </div>
+        </div>
+        <div class="rail-bottom">
+          <div class="pill">Reproducible</div>
+          <div class="pill">Code-backed workflow</div>
+        </div>
+      </aside>
+      <div class="content">
+        <div class="topline">
+          <div class="kicker">End-to-End Architecture</div>
+          <div class="meta">From yearly archives to deployed Streamlit demo</div>
+        </div>
+        <div class="body">
+          <div class="pipeline fade-up">
+            <div class="stage">
+              <div class="num">1</div>
+              <h3>Yearly ZIP Archives</h3>
+              <p>Historical Chicago crime data stored per year for both dashboard use and model preparation.</p>
+            </div>
+            <div class="arrow">→</div>
+            <div class="stage">
+              <div class="num">2</div>
+              <h3>Dataset Builder</h3>
+              <p><code>build_phase2_dataset()</code> merges selected years and optionally caps rows per year.</p>
+            </div>
+            <div class="arrow">→</div>
+            <div class="stage">
+              <div class="num">3</div>
+              <h3>DataProcessor</h3>
+              <p>Creates negatives, applies chronological split, engineers temporal, spatial, and historical features.</p>
+            </div>
+          </div>
+          <div class="pipeline fade-up delay-1">
+            <div class="stage">
+              <div class="num">4</div>
+              <h3>Train & Tune</h3>
+              <p>Runs LR, Decision Tree, Random Forest, and HistGradientBoosting with small validation grids.</p>
+            </div>
+            <div class="arrow">→</div>
+            <div class="stage">
+              <div class="num">5</div>
+              <h3>Evaluate</h3>
+              <p>Exports record-level metrics plus spatial and temporal alignment summaries.</p>
+            </div>
+            <div class="arrow">→</div>
+            <div class="stage">
+              <div class="num">6</div>
+              <h3>Deploy Demo</h3>
+              <p>Loads the saved HGB model into a Streamlit app with dashboard and prediction workflows.</p>
+            </div>
+          </div>
+          <div class="callout fade-up delay-2">
+            This is the main process slide. It maps closely to the actual repository structure:
+            <code>src/data/</code>, <code>src/scripts/</code>, <code>artifacts/</code>, and <code>apps/dashboard/</code>.
+          </div>
+        </div>
+        <div class="footer">
+          <span>Recommended speaker cue: walk left-to-right twice, then stop.</span>
+          <span>4 / 9</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="slide" data-step="5">
+      <aside class="rail">
+        <div class="rail-top">
+          <div class="eyebrow">Feature Design</div>
+          <div class="slide-no">05</div>
+          <div class="track">
+            <span>Pipeline</span>
+            <span class="active-step">Features</span>
+            <span>Models</span>
+            <span>Results</span>
+          </div>
+        </div>
+        <div class="rail-bottom">
+          <div class="pill">Temporal + Spatial + Historical</div>
+        </div>
+      </aside>
+      <div class="content">
+        <div class="topline">
+          <div class="kicker">Feature Engineering Strategy</div>
+          <div class="meta">Designed to avoid leakage and preserve deployment realism</div>
+        </div>
+        <div class="body">
+          <div class="grid-3">
+            <div class="card fade-up">
+              <h3>Temporal</h3>
+              <ul class="clean">
+                <li><code>hour</code>, <code>day_of_week</code>, <code>month</code>, <code>week_of_year</code></li>
+                <li>Cyclic encodings for hour, weekday, and month</li>
+                <li>Binary indicators for weekend, night, and rush hour</li>
+              </ul>
+            </div>
+            <div class="card fade-up delay-1">
+              <h3>Spatial</h3>
+              <ul class="clean">
+                <li>District, ward, beat, and community area</li>
+                <li>Latitude / longitude and X-Y coordinates</li>
+                <li>Grid-cell binning and missingness indicators</li>
+              </ul>
+            </div>
+            <div class="card fade-up delay-2">
+              <h3>Historical</h3>
+              <ul class="clean">
+                <li><code>crimes_last_7d</code>, <code>14d</code>, <code>30d</code>, <code>90d</code></li>
+                <li>Local density proxy: <code>crime_density_500m</code></li>
+                <li>Counts are computed strictly from events before time <code>T</code></li>
+              </ul>
+            </div>
+          </div>
+          <div class="grid-2 fade-up delay-3">
+            <div class="card">
+              <h3>Leakage control</h3>
+              <ul class="clean">
+                <li>Post-incident fields such as <code>Primary Type</code>, <code>IUCR</code>, <code>Arrest</code>, and <code>Domestic</code> are dropped.</li>
+                <li>Chronological split uses 70% train, 15% validation, and 15% test.</li>
+                <li>Cold-start rows without prior history are removed after feature construction.</li>
+              </ul>
+            </div>
+            <div class="card accent-card">
+              <h3>Why 7 / 14 / 30 / 90 days?</h3>
+              <ul class="clean">
+                <li>7d for weekly rhythm</li>
+                <li>14d for short-term carryover</li>
+                <li>30d for monthly seasonality</li>
+                <li>90d for quarterly persistence</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+        <div class="footer">
+          <span>Recommended speaker cue: this slide answers most methodological questions.</span>
+          <span>5 / 9</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="slide" data-step="6">
+      <aside class="rail">
+        <div class="rail-top">
+          <div class="eyebrow">Model Benchmarks</div>
+          <div class="slide-no">06</div>
+          <div class="track">
+            <span>Features</span>
+            <span class="active-step">Models</span>
+            <span>Metrics</span>
+            <span>Insights</span>
+          </div>
+        </div>
+        <div class="rail-bottom">
+          <div class="pill">Validation-selected configs</div>
+        </div>
+      </aside>
+      <div class="content">
+        <div class="topline">
+          <div class="kicker">Model Comparison</div>
+          <div class="meta">All reported scores below are test-split metrics</div>
+        </div>
+        <div class="body">
+          <table class="table fade-up">
+            <thead>
+              <tr>
+                <th>Model</th>
+                <th>Role</th>
+                <th>AUROC</th>
+                <th>AUPRC</th>
+                <th>Takeaway</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>HistGradientBoosting</strong> <span class="tag best">Best overall</span></td>
+                <td>Boosted-tree benchmark</td>
+                <td>0.591</td>
+                <td>0.573</td>
+                <td>Slightly best overall, but not by a large margin</td>
+              </tr>
+              <tr>
+                <td><strong>Random Forest</strong> <span class="tag mid">Close</span></td>
+                <td>Bagged-tree ensemble</td>
+                <td>0.583</td>
+                <td>0.567</td>
+                <td>Competitive nonlinear baseline</td>
+              </tr>
+              <tr>
+                <td><strong>Decision Tree</strong> <span class="tag mid">Baseline+</span></td>
+                <td>Single-tree baseline</td>
+                <td>0.581</td>
+                <td>0.552</td>
+                <td>Helps show ensemble gain over a single tree</td>
+              </tr>
+              <tr>
+                <td><strong>Logistic Regression</strong> <span class="tag mid">Transparent</span></td>
+                <td>Linear baseline</td>
+                <td>0.577</td>
+                <td>0.550</td>
+                <td>Simplest model, still in a similar performance range</td>
+              </tr>
+            </tbody>
+          </table>
+          <div class="callout fade-up delay-1">
+            Our key result is not that one model dominates. The more honest interpretation is that
+            all four benchmarks show modest predictive signal, with HistGradientBoosting only
+            slightly ahead.
+          </div>
+        </div>
+        <div class="footer">
+          <span>Recommended speaker cue: avoid saying “significantly better” here.</span>
+          <span>6 / 9</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="slide" data-step="7">
+      <aside class="rail">
+        <div class="rail-top">
+          <div class="eyebrow">Results & Interpretation</div>
+          <div class="slide-no">07</div>
+          <div class="track">
+            <span>Models</span>
+            <span class="active-step">Evaluation</span>
+            <span>Importance</span>
+            <span>Limits</span>
+          </div>
+        </div>
+        <div class="rail-bottom">
+          <div class="pill">Temporal signal dominates</div>
+        </div>
+      </aside>
+      <div class="content">
+        <div class="topline">
+          <div class="kicker">Spatial / Temporal Alignment and Feature Importance</div>
+          <div class="meta">Important for understanding what the models actually learn</div>
+        </div>
+        <div class="body">
+          <div class="grid-2">
+            <div class="card fade-up">
+              <h3>Spatial-temporal evaluation</h3>
+              <ul class="clean">
+                <li>Hourly correlation is strong for all models, often above <strong>0.93</strong>.</li>
+                <li>District-level hotspot ranking is much weaker and sometimes even negatively correlated.</li>
+                <li>This means the models track <strong>when</strong> risk changes better than <strong>where</strong> hotspots rank.</li>
+              </ul>
+            </div>
+            <div class="card fade-up delay-1">
+              <h3>HistGradientBoosting feature groups</h3>
+              <div class="bars">
+                <div class="bar-row">
+                  <div class="bar-label">Temporal</div>
+                  <div class="bar-track"><div class="bar-fill" style="width: 94.3%;"></div></div>
+                  <div class="bar-value">94.3%</div>
+                </div>
+                <div class="bar-row">
+                  <div class="bar-label">Spatial</div>
+                  <div class="bar-track"><div class="bar-fill" style="width: 4.1%;"></div></div>
+                  <div class="bar-value">4.1%</div>
+                </div>
+                <div class="bar-row">
+                  <div class="bar-label">Historical</div>
+                  <div class="bar-track"><div class="bar-fill" style="width: 1.4%;"></div></div>
+                  <div class="bar-value">1.4%</div>
+                </div>
+                <div class="bar-row">
+                  <div class="bar-label">Missingness</div>
+                  <div class="bar-track"><div class="bar-fill" style="width: 0.3%;"></div></div>
+                  <div class="bar-value">0.3%</div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="grid-2 fade-up delay-2">
+            <div class="card">
+              <h3>Top features in the best model</h3>
+              <ul class="clean">
+                <li><code>hour_sin</code></li>
+                <li><code>hour</code></li>
+                <li><code>day_of_week</code></li>
+                <li><code>dow_sin</code></li>
+                <li><code>crimes_last_30d</code> and several spatial coordinates</li>
+              </ul>
+            </div>
+            <div class="card accent-card">
+              <h3>Main interpretation</h3>
+              <p class="lede" style="font-size: 1rem; max-width: 38ch;">
+                The current pipeline learns temporal rhythm far more strongly than precise spatial hotspot ranking.
+                So the demo should be presented as a timing-aware planning aid, not a precise district ranking engine.
+              </p>
+            </div>
+          </div>
+        </div>
+        <div class="footer">
+          <span>Recommended speaker cue: this slide supports your “modest but meaningful” framing.</span>
+          <span>7 / 9</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="slide" data-step="8">
+      <aside class="rail">
+        <div class="rail-top">
+          <div class="eyebrow">Deployment</div>
+          <div class="slide-no">08</div>
+          <div class="track">
+            <span>Evaluation</span>
+            <span class="active-step">Demo</span>
+            <span>Wrap-up</span>
+            <span>Q&amp;A</span>
+          </div>
+        </div>
+        <div class="rail-bottom">
+          <div class="pill">POC / MVP</div>
+          <div class="pill">Functionality over aesthetics</div>
+        </div>
+      </aside>
+      <div class="content">
+        <div class="topline">
+          <div class="kicker">Streamlit Demo</div>
+          <div class="meta">One app, two workflows</div>
+        </div>
+        <div class="body">
+          <div class="grid-2">
+            <div class="card fade-up">
+              <h3>What the deployed app includes</h3>
+              <ul class="clean">
+                <li><strong>Dashboard mode</strong> for historical exploration</li>
+                <li><strong>Prediction Demo</strong> for entering district, date, and hour</li>
+                <li>Model output: probability, risk band, and recent district counts</li>
+                <li>Basic validation: date bounds, spatial field bounds, and cold-start handling</li>
+              </ul>
+            </div>
+            <div class="card fade-up delay-1">
+              <h3>Recommended live demo flow</h3>
+              <ul class="clean">
+                <li>Start on the welcome screen</li>
+                <li>Open the dashboard and show map + temporal heatmap</li>
+                <li>Switch to Prediction Demo</li>
+                <li>Enter one district, one date, one hour</li>
+                <li>Click <code>Predict Risk</code> and interpret the output</li>
+              </ul>
+            </div>
+          </div>
+          <div class="callout fade-up delay-2">
+            The strongest narrative is: historical exploration explains the data context, and the prediction page shows how the trained benchmark can be used in a live proof-of-concept workflow.
+          </div>
+        </div>
+        <div class="footer">
+          <span>Recommended speaker cue: this is where you transition into the actual live demo.</span>
+          <span>8 / 9</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="slide" data-step="9">
+      <aside class="rail">
+        <div class="rail-top">
+          <div class="eyebrow">Closing</div>
+          <div class="slide-no">09</div>
+          <div class="track">
+            <span>Demo</span>
+            <span class="active-step">Wrap-up</span>
+            <span>Q&amp;A</span>
+          </div>
+        </div>
+        <div class="rail-bottom">
+          <div class="pill">Thank you</div>
+        </div>
+      </aside>
+      <div class="content">
+        <div class="topline">
+          <div class="kicker">Conclusion and Q&amp;A</div>
+          <div class="meta">Most likely questions to prepare for</div>
+        </div>
+        <div class="body">
+          <div class="grid-2">
+            <div class="accent-card card fade-up">
+              <h2>What we built</h2>
+              <ul class="clean" style="margin-top: 18px;">
+                <li>A reproducible end-to-end pipeline from yearly archives to deployed demo</li>
+                <li>A binary crime occurrence prediction formulation with cautious label construction</li>
+                <li>A modest but consistent benchmark signal, led slightly by HistGradientBoosting</li>
+                <li>A Streamlit proof-of-concept for interactive prediction and discussion</li>
+              </ul>
+            </div>
+            <div class="card fade-up delay-1">
+              <h3>Questions we expect</h3>
+              <ul class="clean">
+                <li>Why did we switch from event rows to district-hour units?</li>
+                <li>Why use chronological split instead of random split?</li>
+                <li>Why choose 7, 14, 30, and 90-day windows?</li>
+                <li>Why are model differences so small?</li>
+                <li>Why is temporal alignment stronger than spatial hotspot ranking?</li>
+              </ul>
+            </div>
+          </div>
+          <div class="callout fade-up delay-2">
+            Final framing: this is a decision-support proof-of-concept with clear methodological limitations, not a production policing system.
+          </div>
+        </div>
+        <div class="footer">
+          <span>Replace this footer with your live app URL before presenting.</span>
+          <span>9 / 9</span>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <div class="progress">
+    <div class="progress-bar" id="progressBar"></div>
+  </div>
+
+  <script>
+    const slides = Array.from(document.querySelectorAll(".slide"));
+    const progressBar = document.getElementById("progressBar");
+    let index = 0;
+
+    function showSlide(nextIndex) {
+      index = (nextIndex + slides.length) % slides.length;
+      slides.forEach((slide, i) => slide.classList.toggle("active", i === index));
+      progressBar.style.width = `${((index + 1) / slides.length) * 100}%`;
+      document.title = `Team 22 Slides · ${index + 1}/${slides.length}`;
+    }
+
+    function goNext() { showSlide(index + 1); }
+    function goPrev() { showSlide(index - 1); }
+
+    document.addEventListener("keydown", (event) => {
+      if (["ArrowRight", "ArrowDown", " ", "PageDown", "j", "J"].includes(event.key)) {
+        event.preventDefault();
+        goNext();
+      }
+      if (["ArrowLeft", "ArrowUp", "PageUp", "k", "K"].includes(event.key)) {
+        event.preventDefault();
+        goPrev();
+      }
+      if (/^[1-9]$/.test(event.key)) {
+        const target = Number(event.key) - 1;
+        if (target < slides.length) {
+          showSlide(target);
+        }
+      }
+    });
+
+    let touchStartX = 0;
+    document.addEventListener("touchstart", (event) => {
+      touchStartX = event.changedTouches[0].screenX;
+    }, { passive: true });
+
+    document.addEventListener("touchend", (event) => {
+      const touchEndX = event.changedTouches[0].screenX;
+      const delta = touchEndX - touchStartX;
+      if (Math.abs(delta) > 40) {
+        if (delta < 0) goNext();
+        else goPrev();
+      }
+    }, { passive: true });
+
+    showSlide(0);
+  </script>
+</body>
+</html>

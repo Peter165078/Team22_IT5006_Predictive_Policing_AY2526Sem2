@@ -1,38 +1,38 @@
 feature,importance,model,importance_abs,feature_group
-X Coordinate,0.07349435404746779,random_forest,0.07349435404746779,spatial
-Y Coordinate,0.0651861504016454,random_forest,0.0651861504016454,spatial
-crimes_last_90d,0.0651808723148575,random_forest,0.0651808723148575,historical
-Latitude,0.06372865319376389,random_forest,0.06372865319376389,spatial
-hour_sin,0.06278065182892092,random_forest,0.06278065182892092,temporal
-day_of_year,0.05933621133037804,random_forest,0.05933621133037804,temporal
-hour,0.05751521860811661,random_forest,0.05751521860811661,temporal
-crimes_last_30d,0.057425279606990835,random_forest,0.057425279606990835,historical
-crimes_last_14d,0.05260507071687413,random_forest,0.05260507071687413,historical
-Beat,0.051773214826462674,random_forest,0.051773214826462674,spatial
-crimes_last_7d,0.047968127414114395,random_forest,0.047968127414114395,historical
-hour_cos,0.04426931226160736,random_forest,0.04426931226160736,temporal
-week_of_year,0.04178962044762592,random_forest,0.04178962044762592,temporal
-Ward,0.03629989794668907,random_forest,0.03629989794668907,spatial
-grid_lat_bin,0.035471777716887656,random_forest,0.035471777716887656,spatial
-Community Area,0.033503470947775275,random_forest,0.033503470947775275,spatial
-day_of_week,0.022526041011790676,random_forest,0.022526041011790676,temporal
-dow_sin,0.022411896297992805,random_forest,0.022411896297992805,temporal
-month,0.018310817749260553,random_forest,0.018310817749260553,temporal
-month_cos,0.018178485908807322,random_forest,0.018178485908807322,temporal
-District,0.017342074806937204,random_forest,0.017342074806937204,spatial
-month_sin,0.016964881429230257,random_forest,0.016964881429230257,temporal
-dow_cos,0.01510871669901239,random_forest,0.01510871669901239,temporal
-is_night,0.007008219207128091,random_forest,0.007008219207128091,temporal
-is_weekend,0.005922012683795022,random_forest,0.005922012683795022,temporal
-is_rush_hour,0.00451203332879395,random_forest,0.00451203332879395,temporal
-Longitude_missing,0.0008602850173993815,random_forest,0.0008602850173993815,missing_indicator
-X Coordinate_missing,0.0008563461118969934,random_forest,0.0008563461118969934,missing_indicator
-Latitude_missing,0.0008406000125883605,random_forest,0.0008406000125883605,missing_indicator
-Y Coordinate_missing,0.0008297061251895504,random_forest,0.0008297061251895504,missing_indicator
+hour,0.1252880451543253,random_forest,0.1252880451543253,temporal
+hour_sin,0.11798685093469431,random_forest,0.11798685093469431,temporal
+crimes_last_30d,0.10297537960824456,random_forest,0.10297537960824456,historical
+crimes_last_14d,0.09666682803736089,random_forest,0.09666682803736089,historical
+crimes_last_7d,0.08419722641150824,random_forest,0.08419722641150824,historical
+crimes_last_90d,0.08312975978174818,random_forest,0.08312975978174818,historical
+hour_cos,0.0508449916961028,random_forest,0.0508449916961028,temporal
+Community Area,0.039455560828720745,random_forest,0.039455560828720745,spatial
+day_of_year,0.032776242827735835,random_forest,0.032776242827735835,temporal
+District,0.03171487904058069,random_forest,0.03171487904058069,spatial
+X Coordinate,0.02771687287537696,random_forest,0.02771687287537696,spatial
+is_night,0.023293043173029816,random_forest,0.023293043173029816,temporal
+week_of_year,0.021595557476370125,random_forest,0.021595557476370125,temporal
+Latitude,0.020699014607784047,random_forest,0.020699014607784047,spatial
+grid_lat_bin,0.019894113782852357,random_forest,0.019894113782852357,spatial
+Beat,0.01602736245453782,random_forest,0.01602736245453782,spatial
+dow_sin,0.015496137971814698,random_forest,0.015496137971814698,temporal
+day_of_week,0.015260886170530674,random_forest,0.015260886170530674,temporal
+Y Coordinate,0.015118930453475782,random_forest,0.015118930453475782,spatial
+Ward,0.011793109364272076,random_forest,0.011793109364272076,spatial
+month,0.009973610926337728,random_forest,0.009973610926337728,temporal
+month_cos,0.00984613812010602,random_forest,0.00984613812010602,temporal
+month_sin,0.008811239076741126,random_forest,0.008811239076741126,temporal
+dow_cos,0.00775795750634627,random_forest,0.00775795750634627,temporal
+is_weekend,0.006834532789582751,random_forest,0.006834532789582751,temporal
+is_rush_hour,0.004845728929820211,random_forest,0.004845728929820211,temporal
 District_missing,0.0,random_forest,0.0,missing_indicator
 Ward_missing,0.0,random_forest,0.0,missing_indicator
 Community Area_missing,0.0,random_forest,0.0,missing_indicator
 Beat_missing,0.0,random_forest,0.0,missing_indicator
+Latitude_missing,0.0,random_forest,0.0,missing_indicator
+Longitude_missing,0.0,random_forest,0.0,missing_indicator
+X Coordinate_missing,0.0,random_forest,0.0,missing_indicator
+Y Coordinate_missing,0.0,random_forest,0.0,missing_indicator
 grid_lon_bin,0.0,random_forest,0.0,spatial
 Longitude,0.0,random_forest,0.0,spatial
 crime_density_500m,0.0,random_forest,0.0,historical

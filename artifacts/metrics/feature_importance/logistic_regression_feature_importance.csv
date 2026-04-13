@@ -1,38 +1,38 @@
 feature,importance,model,importance_abs,feature_group
-hour_sin,0.5223006195504944,logistic_regression,0.5223006195504944,temporal
-Beat,0.42674773494717194,logistic_regression,0.42674773494717194,spatial
-District,0.4227924009647564,logistic_regression,0.4227924009647564,spatial
-grid_lat_bin,0.3576938263133496,logistic_regression,0.3576938263133496,spatial
-Latitude,0.2622455154184238,logistic_regression,0.2622455154184238,spatial
-Community Area_missing,0.2382024694402465,logistic_regression,0.2382024694402465,missing_indicator
-hour,0.13792305862951657,logistic_regression,0.13792305862951657,temporal
-hour_cos,0.12305555708915983,logistic_regression,0.12305555708915983,temporal
-Y Coordinate,0.12215300243869985,logistic_regression,0.12215300243869985,spatial
-Ward_missing,0.06228149715677978,logistic_regression,0.06228149715677978,missing_indicator
-month,0.050607381209440326,logistic_regression,0.050607381209440326,temporal
-is_night,0.0414286296694066,logistic_regression,0.0414286296694066,temporal
-Longitude_missing,0.032670726469554254,logistic_regression,0.032670726469554254,missing_indicator
-Latitude_missing,0.032670726469554254,logistic_regression,0.032670726469554254,missing_indicator
-X Coordinate_missing,0.032670726469554254,logistic_regression,0.032670726469554254,missing_indicator
-Y Coordinate_missing,0.032670726469554254,logistic_regression,0.032670726469554254,missing_indicator
-week_of_year,0.03086234852355701,logistic_regression,0.03086234852355701,temporal
-day_of_year,0.028256779943070208,logistic_regression,0.028256779943070208,temporal
-crimes_last_14d,0.017924219978644355,logistic_regression,0.017924219978644355,historical
-is_weekend,0.017567824290238437,logistic_regression,0.017567824290238437,temporal
-crimes_last_7d,0.015468173982533799,logistic_regression,0.015468173982533799,historical
-Ward,0.015327209179685634,logistic_regression,0.015327209179685634,spatial
-is_rush_hour,0.012429670922981764,logistic_regression,0.012429670922981764,temporal
-X Coordinate,0.011620509796670338,logistic_regression,0.011620509796670338,spatial
-day_of_week,0.01085047759827073,logistic_regression,0.01085047759827073,temporal
-Community Area,0.006226367709067721,logistic_regression,0.006226367709067721,spatial
-dow_sin,0.0060480453653520136,logistic_regression,0.0060480453653520136,temporal
-crimes_last_90d,0.004878764198525044,logistic_regression,0.004878764198525044,historical
-month_sin,0.0025529581095775924,logistic_regression,0.0025529581095775924,temporal
-month_cos,0.0013157904779422247,logistic_regression,0.0013157904779422247,temporal
-dow_cos,0.0006554731801146543,logistic_regression,0.0006554731801146543,temporal
-crimes_last_30d,0.0003830547860359241,logistic_regression,0.0003830547860359241,historical
-Beat_missing,0.0,logistic_regression,0.0,missing_indicator
-grid_lon_bin,0.0,logistic_regression,0.0,spatial
-District_missing,0.0,logistic_regression,0.0,missing_indicator
+District,2.39363171541601,logistic_regression,2.39363171541601,spatial
+Beat,2.0886016253760875,logistic_regression,2.0886016253760875,spatial
+hour_sin,0.819802403570536,logistic_regression,0.819802403570536,temporal
+hour_cos,0.32307098411359597,logistic_regression,0.32307098411359597,temporal
+crimes_last_14d,0.2876039890012612,logistic_regression,0.2876039890012612,historical
+crimes_last_7d,0.27178808473280136,logistic_regression,0.27178808473280136,historical
+day_of_year,0.18234529125178714,logistic_regression,0.18234529125178714,temporal
+crimes_last_30d,0.1764471291326286,logistic_regression,0.1764471291326286,historical
+month,0.14776988349925968,logistic_regression,0.14776988349925968,temporal
+dow_sin,0.07100437230921951,logistic_regression,0.07100437230921951,temporal
+grid_lat_bin,0.056870130699031594,logistic_regression,0.056870130699031594,spatial
+hour,0.05269287756949729,logistic_regression,0.05269287756949729,temporal
+is_rush_hour,0.05167513277379553,logistic_regression,0.05167513277379553,temporal
+Latitude,0.03319361228425248,logistic_regression,0.03319361228425248,spatial
+is_weekend,0.026628094692163786,logistic_regression,0.026628094692163786,temporal
+is_night,0.02435556100049811,logistic_regression,0.02435556100049811,temporal
+month_sin,0.022322578396822914,logistic_regression,0.022322578396822914,temporal
+crimes_last_90d,0.02173494164338223,logistic_regression,0.02173494164338223,historical
+month_cos,0.021299554632253102,logistic_regression,0.021299554632253102,temporal
+Ward,0.019328175493691875,logistic_regression,0.019328175493691875,spatial
+dow_cos,0.014705674765181719,logistic_regression,0.014705674765181719,temporal
+week_of_year,0.011128271286337097,logistic_regression,0.011128271286337097,temporal
+day_of_week,0.010095101019557474,logistic_regression,0.010095101019557474,temporal
+Y Coordinate,0.0048804231287688914,logistic_regression,0.0048804231287688914,spatial
+Community Area,0.004178807275480109,logistic_regression,0.004178807275480109,spatial
+X Coordinate,0.002339415651753386,logistic_regression,0.002339415651753386,spatial
+Y Coordinate_missing,0.0,logistic_regression,0.0,missing_indicator
 Longitude,0.0,logistic_regression,0.0,spatial
+grid_lon_bin,0.0,logistic_regression,0.0,spatial
+X Coordinate_missing,0.0,logistic_regression,0.0,missing_indicator
+Longitude_missing,0.0,logistic_regression,0.0,missing_indicator
+Latitude_missing,0.0,logistic_regression,0.0,missing_indicator
+Beat_missing,0.0,logistic_regression,0.0,missing_indicator
+Community Area_missing,0.0,logistic_regression,0.0,missing_indicator
+Ward_missing,0.0,logistic_regression,0.0,missing_indicator
+District_missing,0.0,logistic_regression,0.0,missing_indicator
 crime_density_500m,0.0,logistic_regression,0.0,historical

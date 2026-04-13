@@ -89,6 +89,6 @@ A concise interpretation that can be used in the report is:
 This section should still be written carefully in the final report:
 
 - feature importance depends on the model and the importance method used
-- the current benchmark uses a sampled `2022-2024` setup
+- the final benchmark should be regenerated from the refactored `2015-2024` training scope with `2025` held out
 - the Decision Tree and Random Forest importances are impurity-based and should be interpreted more cautiously than held-out permutation importance
 - these findings should be presented as evidence from the current experiment, not as universal causal claims about crime behavior

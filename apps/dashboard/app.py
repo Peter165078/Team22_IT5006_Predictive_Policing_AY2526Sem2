@@ -16,15 +16,15 @@ import streamlit as st
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(PROJECT_ROOT))
 
-from src.data.dataset_builder import build_phase2_dataset
+from src.data.dataset_builder import build_district_hour_dataset
 from src.data.processor import DataProcessor
 
 MODEL_NAME = "HistGradientBoosting"
 MODEL_PATH = PROJECT_ROOT / "artifacts" / "models" / "hist_gradient_boosting.pkl"
 PREDICTION_SOURCE_DIR = PROJECT_ROOT / "apps" / "dashboard" / "split_data_by_year"
-PREDICTION_DATA_PATH = Path(tempfile.gettempdir()) / "team22_phase2_prediction_data.csv"
-MIN_PREDICTION_DATE = pd.Timestamp("2022-01-08")
-MAX_PREDICTION_DATE = pd.Timestamp("2024-12-31")
+PREDICTION_DATA_PATH = Path(tempfile.gettempdir()) / "team22_district_hour_prediction_data.csv"
+MIN_PREDICTION_DATE = pd.Timestamp("2025-01-01")
+MAX_PREDICTION_DATE = pd.Timestamp("2025-12-31")
 
 st.set_page_config(
     page_title="Chicago Crime Intel",
@@ -161,12 +161,12 @@ def metric_card(title: str, value: str, sub: str, color: str) -> None:
 def build_prediction_dataset() -> None:
     if PREDICTION_DATA_PATH.exists():
         return
-    build_phase2_dataset(
+    build_district_hour_dataset(
         source_dir=PREDICTION_SOURCE_DIR,
         output_path=PREDICTION_DATA_PATH,
-        start_year=2022,
-        end_year=2024,
-        max_rows_per_year=20_000,
+        start_year=2015,
+        end_year=2025,
+        max_rows_per_year=None,
         overwrite=True,
     )
 
@@ -345,7 +345,7 @@ def render_dashboard() -> None:
         st.divider()
         st.title(f"Controls ({year})")
         st.success(f"Loaded {len(df):,} rows")
-        available_years = [y for y in range(2014, 2025) if get_file_path(y)]
+        available_years = [y for y in range(2014, 2026) if get_file_path(y)]
         selected_year = st.selectbox("Dashboard year", options=available_years, index=available_years.index(year))
         if selected_year != year:
             st.session_state.selected_year = selected_year
@@ -482,7 +482,7 @@ def render_prediction_demo() -> None:
         st.divider()
         st.info(
             f"Model in use: {MODEL_NAME}\n\n"
-            f"Prediction date range: {MIN_PREDICTION_DATE.date()} to {MAX_PREDICTION_DATE.date()}"
+            f"Prediction year: {MIN_PREDICTION_DATE.year} holdout window"
         )
 
     district_options = sorted(engine["district_reference"]["District"].dropna().astype(int).unique().tolist())
@@ -495,7 +495,7 @@ def render_prediction_demo() -> None:
         with st.form("prediction_form"):
             selected_date = st.date_input(
                 "Incident date",
-                value=pd.Timestamp("2024-10-01").date(),
+                value=pd.Timestamp("2025-10-01").date(),
                 min_value=MIN_PREDICTION_DATE.date(),
                 max_value=MAX_PREDICTION_DATE.date(),
             )
@@ -602,11 +602,11 @@ def render_prediction_demo() -> None:
 
     metric_col1, metric_col2, metric_col3 = st.columns(3)
     with metric_col1:
-        metric_card("Crimes in last 7d", f"{recent_counts['7d']}", "Same district", "#3b82f6")
+        metric_card("Positive hours in last 7d", f"{recent_counts['7d']}", "Same district", "#3b82f6")
     with metric_col2:
-        metric_card("Crimes in last 30d", f"{recent_counts['30d']}", "Same district", "#8b5cf6")
+        metric_card("Positive hours in last 30d", f"{recent_counts['30d']}", "Same district", "#8b5cf6")
     with metric_col3:
-        metric_card("Crimes in last 90d", f"{recent_counts['90d']}", "Same district", "#ef4444")
+        metric_card("Positive hours in last 90d", f"{recent_counts['90d']}", "Same district", "#ef4444")
 
     st.markdown("---")
     st.subheader("How to interpret this output")
