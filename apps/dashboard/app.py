@@ -490,6 +490,14 @@ def render_prediction_demo() -> None:
     district = st.selectbox("Police district", district_options, index=district_options.index(default_district))
     defaults = get_district_defaults(engine, district)
 
+    def _bounded_default(value: object, fallback: float, min_value: float, max_value: float, as_int: bool = False):
+        if value is None or pd.isna(value):
+            numeric = float(fallback)
+        else:
+            numeric = float(value)
+        numeric = max(min_value, min(max_value, numeric))
+        return int(round(numeric)) if as_int else numeric
+
     left, right = st.columns([1.1, 0.9])
     with left:
         with st.form("prediction_form"):
@@ -504,16 +512,40 @@ def render_prediction_demo() -> None:
             st.markdown("**Optional location refinement**")
             expander = st.expander("Edit advanced spatial fields", expanded=False)
             with expander:
-                ward = st.number_input("Ward", min_value=1, max_value=50, value=defaults["Ward"] or 1, step=1)
-                community_area = st.number_input(
-                    "Community Area", min_value=1, max_value=77, value=defaults["Community Area"] or 1, step=1
+                ward = st.number_input(
+                    "Ward",
+                    min_value=1,
+                    max_value=50,
+                    value=_bounded_default(defaults.get("Ward"), 1, 1, 50, as_int=True),
+                    step=1,
                 )
-                beat = st.number_input("Beat", min_value=111, max_value=2535, value=defaults["Beat"] or 111, step=1)
+                community_area = st.number_input(
+                    "Community Area",
+                    min_value=1,
+                    max_value=77,
+                    value=_bounded_default(defaults.get("Community Area"), 1, 1, 77, as_int=True),
+                    step=1,
+                )
+                beat = st.number_input(
+                    "Beat",
+                    min_value=111,
+                    max_value=2535,
+                    value=_bounded_default(defaults.get("Beat"), 111, 111, 2535, as_int=True),
+                    step=1,
+                )
                 latitude = st.number_input(
-                    "Latitude", min_value=36.0, max_value=42.0, value=float(defaults["Latitude"] or 41.85), format="%.6f"
+                    "Latitude",
+                    min_value=36.0,
+                    max_value=42.0,
+                    value=_bounded_default(defaults.get("Latitude"), 41.85, 36.0, 42.0),
+                    format="%.6f",
                 )
                 longitude = st.number_input(
-                    "Longitude", min_value=-92.0, max_value=-88.0, value=float(defaults["Longitude"] or -87.65), format="%.6f"
+                    "Longitude",
+                    min_value=-92.0,
+                    max_value=-87.0,
+                    value=_bounded_default(defaults.get("Longitude"), -87.65, -92.0, -87.0),
+                    format="%.6f",
                 )
 
             submit = st.form_submit_button("Predict Risk", type="primary", use_container_width=True)
