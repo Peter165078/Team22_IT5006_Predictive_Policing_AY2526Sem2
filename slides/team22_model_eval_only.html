@@ -1,0 +1,625 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Team 22 | Model Building and Evaluation</title>
+  <style>
+    :root {
+      --bg: #f5f1e8;
+      --paper: #fffaf0;
+      --ink: #1f2937;
+      --muted: #5b6472;
+      --line: #d9d2c2;
+      --navy: #123b5d;
+      --blue: #2563eb;
+      --red: #c2410c;
+      --gold: #c7922f;
+      --green: #0f766e;
+      --shadow: 0 24px 60px rgba(18, 59, 93, 0.14);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html, body {
+      margin: 0;
+      height: 100%;
+      font-family: "Avenir Next", "Segoe UI", sans-serif;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at top left, rgba(37, 99, 235, 0.10), transparent 32%),
+        radial-gradient(circle at bottom right, rgba(194, 65, 12, 0.10), transparent 28%),
+        linear-gradient(180deg, #f8f4ec 0%, #efe8db 100%);
+      overflow: hidden;
+    }
+
+    .deck {
+      height: 100%;
+      position: relative;
+    }
+
+    .slide {
+      display: none;
+      height: 100%;
+      padding: 56px 64px 72px;
+      position: relative;
+    }
+
+    .slide.active {
+      display: grid;
+      animation: fadeIn 420ms ease;
+    }
+
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(16px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .sheet {
+      background: rgba(255, 250, 240, 0.92);
+      border: 1px solid rgba(217, 210, 194, 0.9);
+      box-shadow: var(--shadow);
+      border-radius: 28px;
+      padding: 34px 38px;
+      height: 100%;
+      display: grid;
+      gap: 22px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .sheet::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      right: 0;
+      width: 220px;
+      height: 220px;
+      background: radial-gradient(circle, rgba(199, 146, 47, 0.14), transparent 66%);
+      pointer-events: none;
+    }
+
+    .kicker {
+      font-size: 13px;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: var(--navy);
+      font-weight: 700;
+    }
+
+    h1, h2 {
+      margin: 0;
+      line-height: 1.05;
+    }
+
+    h1 {
+      font-size: 54px;
+      max-width: 900px;
+    }
+
+    h2 {
+      font-size: 38px;
+    }
+
+    h3 {
+      margin: 0 0 10px 0;
+      font-size: 18px;
+      color: var(--navy);
+    }
+
+    p {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.55;
+      font-size: 18px;
+    }
+
+    .lede {
+      font-size: 22px;
+      color: #334155;
+      max-width: 880px;
+    }
+
+    .two-col,
+    .three-col,
+    .metric-strip {
+      display: grid;
+      gap: 20px;
+    }
+
+    .two-col {
+      grid-template-columns: 1fr 1fr;
+    }
+
+    .three-col {
+      grid-template-columns: repeat(3, 1fr);
+    }
+
+    .metric-strip {
+      grid-template-columns: repeat(4, 1fr);
+    }
+
+    .panel,
+    .metric-card,
+    .small-card {
+      background: rgba(255, 255, 255, 0.84);
+      border: 1px solid rgba(217, 210, 194, 0.95);
+      border-radius: 20px;
+      padding: 20px 22px;
+    }
+
+    .metric-card .label {
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--muted);
+      font-weight: 700;
+    }
+
+    .metric-card .value {
+      margin-top: 10px;
+      font-size: 34px;
+      font-weight: 800;
+      color: var(--navy);
+    }
+
+    .metric-card .note {
+      margin-top: 8px;
+      font-size: 15px;
+    }
+
+    .table {
+      display: grid;
+      gap: 10px;
+    }
+
+    .row {
+      display: grid;
+      gap: 12px;
+      align-items: center;
+      padding: 12px 14px;
+      border-radius: 16px;
+      background: rgba(255, 255, 255, 0.86);
+      border: 1px solid rgba(217, 210, 194, 0.95);
+      font-size: 16px;
+    }
+
+    .row.header {
+      background: rgba(18, 59, 93, 0.08);
+      color: var(--navy);
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      font-size: 13px;
+    }
+
+    .row.models {
+      grid-template-columns: 1.4fr repeat(4, 0.8fr);
+    }
+
+    .row.transfer {
+      grid-template-columns: 1.2fr repeat(4, 0.85fr);
+    }
+
+    .winner {
+      border-color: rgba(37, 99, 235, 0.35);
+      box-shadow: inset 0 0 0 1px rgba(37, 99, 235, 0.15);
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: rgba(15, 118, 110, 0.12);
+      color: var(--green);
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+
+    .interpret-figures {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 18px;
+      align-items: stretch;
+    }
+
+    .figure-card {
+      background: rgba(255, 255, 255, 0.86);
+      border: 1px solid rgba(217, 210, 194, 0.95);
+      border-radius: 20px;
+      padding: 14px;
+      display: grid;
+      gap: 10px;
+    }
+
+    .figure-card img {
+      width: 100%;
+      height: 300px;
+      object-fit: contain;
+      border-radius: 16px;
+      background: white;
+      border: 1px solid rgba(217, 210, 194, 0.95);
+    }
+
+    .figure-note {
+      font-size: 14px;
+      line-height: 1.45;
+      color: var(--muted);
+    }
+
+    ul {
+      margin: 0;
+      padding-left: 22px;
+      color: var(--ink);
+      font-size: 18px;
+      line-height: 1.5;
+    }
+
+    li + li {
+      margin-top: 9px;
+    }
+
+    .callout {
+      padding: 18px 20px;
+      border-left: 5px solid var(--gold);
+      background: rgba(199, 146, 47, 0.08);
+      border-radius: 16px;
+      color: #4b5563;
+      font-size: 17px;
+      line-height: 1.55;
+    }
+
+    .footer {
+      position: absolute;
+      left: 74px;
+      right: 74px;
+      bottom: 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      color: #64748b;
+      font-size: 14px;
+    }
+
+    .progress {
+      position: fixed;
+      left: 0;
+      bottom: 0;
+      height: 6px;
+      background: linear-gradient(90deg, var(--navy), var(--blue), var(--red));
+      width: 0;
+      transition: width 240ms ease;
+      z-index: 3;
+    }
+
+    .controls {
+      position: fixed;
+      top: 20px;
+      right: 24px;
+      display: flex;
+      gap: 10px;
+      z-index: 4;
+    }
+
+    .controls button {
+      border: none;
+      background: rgba(18, 59, 93, 0.92);
+      color: white;
+      width: 42px;
+      height: 42px;
+      border-radius: 999px;
+      font-size: 18px;
+      cursor: pointer;
+      box-shadow: 0 10px 22px rgba(18, 59, 93, 0.22);
+    }
+
+    @media (max-width: 1100px) {
+      .slide {
+        padding: 28px 22px 80px;
+      }
+
+      .two-col,
+      .three-col,
+      .metric-strip,
+      .interpret-figures {
+        grid-template-columns: 1fr;
+      }
+
+      .row.models,
+      .row.transfer {
+        grid-template-columns: 1fr;
+      }
+
+      html, body {
+        overflow: auto;
+      }
+
+      .slide {
+        height: auto;
+        min-height: 100vh;
+      }
+
+      .footer {
+        position: static;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="deck">
+    <section class="slide active">
+      <div class="sheet">
+        <div class="kicker">Feature Engineering</div>
+        <h1>From Raw Records to Model Inputs</h1>
+        <p class="lede">After EDA, we did not feed raw crime records directly into the models. We first transformed them into structured, model-ready inputs.</p>
+        <div class="three-col">
+          <div class="small-card">
+            <h3>Temporal features</h3>
+            <ul>
+              <li>hour</li>
+              <li>day of week</li>
+              <li>cyclical encodings</li>
+              <li>week / month signals</li>
+            </ul>
+          </div>
+          <div class="small-card">
+            <h3>Spatial features</h3>
+            <ul>
+              <li>district</li>
+              <li>ward and beat</li>
+              <li>community area</li>
+              <li>coordinates when available</li>
+            </ul>
+          </div>
+          <div class="small-card">
+            <h3>Historical features</h3>
+            <ul>
+              <li>crime counts in last 7d</li>
+              <li>last 14d</li>
+              <li>last 30d</li>
+              <li>last 90d</li>
+            </ul>
+          </div>
+        </div>
+        <div class="two-col">
+          <div class="panel">
+            <h3>Why this step matters</h3>
+            <p>This preprocessing stage converts observational crime data into structured inputs that the models can compare fairly and interpret more clearly.</p>
+          </div>
+          <div class="panel">
+            <h3>Pipeline logic</h3>
+            <p>So the logic is: EDA reveals meaningful patterns, feature engineering converts them into inputs, and then model benchmarking tests which method learns those patterns best.</p>
+          </div>
+        </div>
+        <div class="callout">
+          This bridge is important because it explains how we move from descriptive EDA to a formal prediction task.
+        </div>
+      </div>
+      <div class="footer"><span>Feature engineering</span><span>1 / 5</span></div>
+    </section>
+
+    <section class="slide">
+      <div class="sheet">
+        <div class="kicker">Modeling Strategy</div>
+        <h1>Why These Four Models?</h1>
+        <p class="lede">We chose one linear baseline, one single-tree nonlinear model, and two ensemble methods so that our comparison is methodologically fair and easy to explain.</p>
+        <div class="table">
+          <div class="row header models">
+            <div>Model</div><div>Role</div><div>Assumption</div><div>Interpretability</div><div>Use in Story</div>
+          </div>
+          <div class="row models">
+            <div><strong>Logistic Regression</strong></div><div>Baseline</div><div>Linear</div><div>High</div><div>Tests whether features already contain separable signal</div>
+          </div>
+          <div class="row models">
+            <div><strong>Decision Tree</strong></div><div>Nonlinear baseline</div><div>Single tree</div><div>Medium</div><div>Shows whether ensembling adds value</div>
+          </div>
+          <div class="row models">
+            <div><strong>Random Forest</strong></div><div>Bagged ensemble</div><div>Many trees</div><div>Medium</div><div>Captures nonlinear interactions robustly</div>
+          </div>
+          <div class="row models winner">
+            <div><strong>HistGradientBoosting</strong></div><div>Boosted ensemble</div><div>Stage-wise tree learning</div><div>Lower</div><div>Strong tabular benchmark for structured data</div>
+          </div>
+        </div>
+        <div class="callout">
+          Adding the <strong>Decision Tree</strong> was an important revision after milestone feedback, because it lets us compare a single-tree model directly against Random Forest instead of jumping from Logistic Regression straight to ensembles.
+        </div>
+      </div>
+      <div class="footer"><span>Model choice</span><span>2 / 5</span></div>
+    </section>
+
+    <section class="slide">
+      <div class="sheet">
+        <div class="kicker">Benchmark Results</div>
+        <h2>Best Performance Is Real, but the Margin Is Modest</h2>
+        <div class="metric-strip">
+          <div class="metric-card">
+            <div class="label">Best model</div>
+            <div class="value">HGB</div>
+            <div class="note">HistGradientBoosting</div>
+          </div>
+          <div class="metric-card">
+            <div class="label">Test AUROC</div>
+            <div class="value">0.738</div>
+            <div class="note">Chicago 2025 holdout</div>
+          </div>
+          <div class="metric-card">
+            <div class="label">Test AUPRC</div>
+            <div class="value">0.806</div>
+            <div class="note">Best overall benchmark</div>
+          </div>
+          <div class="metric-card">
+            <div class="label">Feature count</div>
+            <div class="value">37</div>
+            <div class="note">After preprocessing</div>
+          </div>
+        </div>
+        <div class="table">
+          <div class="row header models">
+            <div>Model</div><div>Val AUROC</div><div>Test AUROC</div><div>Val AUPRC</div><div>Test AUPRC</div>
+          </div>
+          <div class="row models">
+            <div>Logistic Regression</div><div>0.7186</div><div>0.7177</div><div>0.7792</div><div>0.7867</div>
+          </div>
+          <div class="row models">
+            <div>Decision Tree</div><div>0.7362</div><div>0.7334</div><div>0.7950</div><div>0.8003</div>
+          </div>
+          <div class="row models">
+            <div>Random Forest</div><div>0.7402</div><div>0.7370</div><div>0.8001</div><div>0.8056</div>
+          </div>
+          <div class="row models winner">
+            <div><strong>HistGradientBoosting</strong></div><div><strong>0.7412</strong></div><div><strong>0.7381</strong></div><div><strong>0.8011</strong></div><div><strong>0.8063</strong></div>
+          </div>
+        </div>
+        <div class="two-col">
+          <div class="panel">
+            <h3>Main takeaway</h3>
+            <p>HistGradientBoosting is the strongest overall benchmark, but the gap over Random Forest is small. So we present this as a careful benchmark win, not a dramatic breakthrough.</p>
+          </div>
+          <div class="panel">
+            <h3>Why this is defensible</h3>
+            <p>The comparison uses the same feature pipeline and chronological split for all four models, so the ranking reflects model behavior rather than inconsistent evaluation setup.</p>
+          </div>
+        </div>
+      </div>
+      <div class="footer"><span>Chicago benchmark</span><span>3 / 5</span></div>
+    </section>
+
+    <section class="slide">
+      <div class="sheet">
+        <div class="kicker">Interpretation</div>
+        <h2>What Drives Predictions?</h2>
+        <div class="interpret-figures">
+          <div class="figure-card">
+            <h3>Feature importance of the best model</h3>
+            <img src="../artifacts/metrics/feature_importance/hist_gradient_boosting_feature_importance_top15.png" alt="HistGradientBoosting feature importance" />
+            <p class="figure-note">The clearest evidence for what the model actually uses: <strong>hour</strong>, cyclical hour features, district identity, and rolling recent counts.</p>
+          </div>
+          <div class="figure-card">
+            <h3>Hourly crime rhythm</h3>
+            <img src="../artifacts/figures/crime_trend_hourly.png" alt="Crime trend by hour" />
+            <p class="figure-note">A visible daily cycle explains why temporal features dominate prediction quality.</p>
+          </div>
+        </div>
+        <div class="panel">
+          <div class="badge">Best-model feature importance</div>
+          <ul>
+            <li>Temporal features contribute about <strong>65.9%</strong> of grouped permutation importance.</li>
+            <li>Historical features contribute about <strong>20.1%</strong>.</li>
+            <li>Spatial features contribute about <strong>14.0%</strong>.</li>
+          </ul>
+          <p style="margin-top: 14px;">Top signals for HistGradientBoosting are <strong>hour</strong>, <strong>hour_sin</strong>, <strong>District</strong>, <strong>crimes_last_30d</strong>, and <strong>crimes_last_14d</strong>.</p>
+          <p style="margin-top: 14px;">So the clean interpretation is: <strong>timing is the dominant signal</strong>, recent local history adds meaningful value, and district identity still helps anchor the model geographically.</p>
+        </div>
+        <div class="callout">
+          Interpretation should stay descriptive, not causal. We can say temporal rhythm is the strongest predictive pattern in our benchmark, but we should not claim this explains the social causes of crime.
+        </div>
+      </div>
+      <div class="footer"><span>Model interpretation</span><span>4 / 5</span></div>
+    </section>
+
+    <section class="slide">
+      <div class="sheet">
+        <div class="kicker">External Evaluation</div>
+        <h2>NIBRS Generalization Supports Robustness Across Jurisdictions</h2>
+        <div class="metric-strip">
+          <div class="metric-card">
+            <div class="label">Colorado AUROC</div>
+            <div class="value">0.820</div>
+            <div class="note">AUPRC 0.624</div>
+          </div>
+          <div class="metric-card">
+            <div class="label">Texas AUROC</div>
+            <div class="value">0.823</div>
+            <div class="note">AUPRC 0.433</div>
+          </div>
+          <div class="metric-card">
+            <div class="label">CO hourly corr</div>
+            <div class="value">0.973</div>
+            <div class="note">County corr 0.524</div>
+          </div>
+          <div class="metric-card">
+            <div class="label">TX hourly corr</div>
+            <div class="value">0.921</div>
+            <div class="note">County corr 0.080</div>
+          </div>
+        </div>
+        <div class="table">
+          <div class="row header transfer">
+            <div>State</div><div>Rows</div><div>AUROC</div><div>AUPRC</div><div>Spatial / Temporal</div>
+          </div>
+          <div class="row transfer">
+            <div>Colorado 2024</div><div>561,744</div><div>0.8203</div><div>0.6243</div><div>0.5237 / 0.9728</div>
+          </div>
+          <div class="row transfer">
+            <div>Texas 2024</div><div>2,368,296</div><div>0.8229</div><div>0.4327</div><div>0.0801 / 0.9209</div>
+          </div>
+        </div>
+        <div class="two-col">
+          <div class="panel">
+            <h3>What this proves</h3>
+            <p>The Chicago-trained model still shows meaningful discrimination on external NIBRS data, so the learned signal is not purely city-specific.</p>
+          </div>
+          <div class="panel">
+            <h3>What stays hard</h3>
+            <p>Temporal transfer is much stronger than spatial transfer. This is why we frame the system as a timing-aware decision-support tool rather than a universal hotspot-ranking engine.</p>
+          </div>
+        </div>
+      </div>
+      <div class="footer"><span>External evaluation</span><span>5 / 5</span></div>
+    </section>
+  </main>
+
+  <div class="controls">
+    <button id="prevBtn" type="button">←</button>
+    <button id="nextBtn" type="button">→</button>
+  </div>
+  <div class="progress" id="progressBar"></div>
+
+  <script>
+    const slides = Array.from(document.querySelectorAll(".slide"));
+    const progressBar = document.getElementById("progressBar");
+    const prevBtn = document.getElementById("prevBtn");
+    const nextBtn = document.getElementById("nextBtn");
+    let index = 0;
+
+    function showSlide(nextIndex) {
+      index = (nextIndex + slides.length) % slides.length;
+      slides.forEach((slide, i) => slide.classList.toggle("active", i === index));
+      progressBar.style.width = `${((index + 1) / slides.length) * 100}%`;
+      document.title = `Model & Evaluation · ${index + 1}/${slides.length}`;
+    }
+
+    function goNext() { showSlide(index + 1); }
+    function goPrev() { showSlide(index - 1); }
+
+    nextBtn.addEventListener("click", goNext);
+    prevBtn.addEventListener("click", goPrev);
+
+    document.addEventListener("keydown", (event) => {
+      if (["ArrowRight", "ArrowDown", " ", "PageDown", "j", "J"].includes(event.key)) {
+        event.preventDefault();
+        goNext();
+      }
+      if (["ArrowLeft", "ArrowUp", "PageUp", "k", "K"].includes(event.key)) {
+        event.preventDefault();
+        goPrev();
+      }
+      if (/^[1-5]$/.test(event.key)) {
+        showSlide(Number(event.key) - 1);
+      }
+    });
+
+    showSlide(0);
+  </script>
+</body>
+</html>

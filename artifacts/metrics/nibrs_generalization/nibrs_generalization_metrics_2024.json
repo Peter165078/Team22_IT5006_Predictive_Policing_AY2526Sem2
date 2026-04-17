@@ -1,0 +1,36 @@
+[
+  {
+    "dataset": "nibrs_county_hour_tx_2023_2024.csv",
+    "eval_year": 2024,
+    "rows": 2368296,
+    "positive_rate": 0.18042508199988516,
+    "accuracy": 0.794901481909356,
+    "precision": 0.25580054160676674,
+    "recall": 0.07162415164989469,
+    "f1": 0.11191273695296045,
+    "auroc": 0.8228614765410354,
+    "auprc": 0.4326905329620161,
+    "county_correlation": 0.08010176912200109,
+    "hourly_correlation": 0.9208921157885963,
+    "distinct_counties": 296,
+    "date_min": "2024-01-01 00:00:00",
+    "date_max": "2024-12-31 23:00:00"
+  },
+  {
+    "dataset": "nibrs_county_hour_co_2023_2024.csv",
+    "eval_year": 2024,
+    "rows": 561744,
+    "positive_rate": 0.20407338574154776,
+    "accuracy": 0.7702975020649976,
+    "precision": 0.4493145476436915,
+    "recall": 0.5566527386445912,
+    "f1": 0.4972570716122497,
+    "auroc": 0.8202676738608734,
+    "auprc": 0.624277499374142,
+    "county_correlation": 0.5237108253451221,
+    "hourly_correlation": 0.9727930275569155,
+    "distinct_counties": 70,
+    "date_min": "2024-01-01 00:00:00",
+    "date_max": "2024-12-31 23:00:00"
+  }
+]

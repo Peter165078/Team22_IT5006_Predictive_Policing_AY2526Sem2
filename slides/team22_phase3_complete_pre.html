@@ -1,0 +1,1335 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Team 22 | Phase 3 Complete Presentation</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;700;800&family=Fraunces:opsz,wght@9..144,600;9..144,700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #f3efe7;
+      --bg-deep: #0f1f34;
+      --bg-panel: rgba(255, 252, 245, 0.88);
+      --paper: #fffdf8;
+      --ink: #142132;
+      --muted: #5f6c7c;
+      --line: rgba(20, 33, 50, 0.10);
+      --blue: #2d63ff;
+      --cyan: #67d1ff;
+      --red: #d55a2a;
+      --gold: #d2a341;
+      --green: #0e8e74;
+      --shadow: 0 24px 60px rgba(13, 29, 49, 0.18);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html, body {
+      height: 100%;
+      overflow: hidden;
+      font-family: "Manrope", sans-serif;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at top left, rgba(103, 209, 255, 0.20), transparent 28%),
+        radial-gradient(circle at bottom right, rgba(213, 90, 42, 0.16), transparent 26%),
+        linear-gradient(135deg, #f6f2ea 0%, #ece4d7 100%);
+    }
+
+    .deck {
+      position: relative;
+      width: 100vw;
+      height: 100vh;
+    }
+
+    .slide {
+      position: absolute;
+      inset: 0;
+      display: grid;
+      grid-template-columns: minmax(180px, 18vw) 1fr;
+      opacity: 0;
+      transform: translateX(4%);
+      transition: opacity 420ms ease, transform 480ms ease;
+      pointer-events: none;
+    }
+
+    .slide.active {
+      opacity: 1;
+      transform: translateX(0);
+      pointer-events: auto;
+    }
+
+    .rail {
+      background:
+        radial-gradient(circle at 18% 14%, rgba(103, 209, 255, 0.24), transparent 24%),
+        linear-gradient(180deg, #12233b 0%, #0a1321 100%);
+      color: #f8fbff;
+      border-right: 1px solid rgba(255, 255, 255, 0.08);
+      padding: 34px 26px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    .eyebrow {
+      font-family: "JetBrains Mono", monospace;
+      font-size: 0.78rem;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: rgba(248, 251, 255, 0.72);
+    }
+
+    .slide-no {
+      margin-top: 10px;
+      font-size: clamp(2.4rem, 4.2vw, 4.4rem);
+      font-weight: 800;
+      line-height: 0.9;
+    }
+
+    .track {
+      margin-top: 18px;
+      display: grid;
+      gap: 10px;
+      font-size: 0.95rem;
+      color: rgba(248, 251, 255, 0.68);
+    }
+
+    .track span.active-step {
+      color: #fff;
+      font-weight: 700;
+    }
+
+    .rail-bottom {
+      display: grid;
+      gap: 10px;
+    }
+
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      width: fit-content;
+      padding: 9px 12px;
+      border-radius: 999px;
+      font-size: 0.82rem;
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      background: rgba(255, 255, 255, 0.08);
+      color: rgba(248, 251, 255, 0.92);
+    }
+
+    .content {
+      padding: 34px 42px 28px;
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      overflow: hidden;
+    }
+
+    .topline {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid var(--line);
+      padding-bottom: 16px;
+    }
+
+    .kicker {
+      font-family: "JetBrains Mono", monospace;
+      font-size: 0.76rem;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: #61748a;
+    }
+
+    .meta {
+      font-size: 0.92rem;
+      color: #61748a;
+    }
+
+    .body {
+      padding-top: 22px;
+      display: grid;
+      align-content: start;
+      gap: 20px;
+      overflow: hidden;
+    }
+
+    h1, h2 {
+      font-family: "Fraunces", serif;
+      line-height: 0.95;
+      color: #102034;
+    }
+
+    h1 {
+      font-size: clamp(3rem, 6vw, 5.5rem);
+      max-width: 11ch;
+    }
+
+    h2 {
+      font-size: clamp(2.2rem, 4.5vw, 3.8rem);
+      max-width: 14ch;
+    }
+
+    h3 {
+      font-size: 1.06rem;
+      margin-bottom: 12px;
+    }
+
+    p {
+      color: var(--muted);
+      line-height: 1.65;
+      font-size: 1rem;
+    }
+
+    .lede {
+      max-width: 70ch;
+      font-size: 1.12rem;
+      color: #3b4a5d;
+    }
+
+    .grid-2,
+    .grid-3,
+    .grid-4 {
+      display: grid;
+      gap: 18px;
+      align-items: start;
+    }
+
+    .grid-2 {
+      grid-template-columns: 1.05fr 0.95fr;
+    }
+
+    .grid-3 {
+      grid-template-columns: repeat(3, 1fr);
+    }
+
+    .grid-4 {
+      grid-template-columns: repeat(4, 1fr);
+    }
+
+    .card,
+    .accent-card,
+    .stat-card,
+    .hero-card,
+    .timeline-card {
+      background: var(--bg-panel);
+      border: 1px solid rgba(255, 255, 255, 0.55);
+      box-shadow: var(--shadow);
+      border-radius: 24px;
+      padding: 20px 22px;
+      backdrop-filter: blur(12px);
+    }
+
+    .accent-card {
+      background:
+        linear-gradient(145deg, rgba(45, 99, 255, 0.14), rgba(103, 209, 255, 0.18)),
+        rgba(255, 252, 245, 0.90);
+      border-color: rgba(45, 99, 255, 0.18);
+    }
+
+    .hero-layout {
+      display: grid;
+      grid-template-columns: 1.2fr 0.8fr;
+      gap: 20px;
+      align-items: stretch;
+    }
+
+    .hero-card {
+      display: grid;
+      gap: 14px;
+      align-content: start;
+    }
+
+    .hero-big {
+      font-size: 2.9rem;
+      font-weight: 800;
+      color: #15345d;
+      line-height: 0.98;
+    }
+
+    .agenda {
+      display: grid;
+      gap: 10px;
+    }
+
+    .agenda-item {
+      display: flex;
+      gap: 12px;
+      align-items: baseline;
+      padding: 12px 14px;
+      border-radius: 16px;
+      background: rgba(255, 255, 255, 0.76);
+      border: 1px solid rgba(20, 33, 50, 0.08);
+    }
+
+    .agenda-no {
+      font-family: "JetBrains Mono", monospace;
+      font-weight: 700;
+      color: var(--blue);
+      min-width: 2ch;
+    }
+
+    .stat-card .label {
+      font-size: 0.78rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: #6f7f92;
+      font-weight: 700;
+    }
+
+    .stat-card .value {
+      margin-top: 10px;
+      font-size: 2rem;
+      line-height: 1;
+      font-weight: 800;
+      color: #163a67;
+    }
+
+    .stat-card .note {
+      margin-top: 8px;
+      font-size: 0.9rem;
+    }
+
+    .equation {
+      font-family: "JetBrains Mono", monospace;
+      font-size: 1.08rem;
+      padding: 14px 16px;
+      border-radius: 16px;
+      background: rgba(16, 32, 52, 0.94);
+      color: #f2f8ff;
+      width: fit-content;
+    }
+
+    .pill-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .pill {
+      padding: 8px 12px;
+      border-radius: 999px;
+      background: rgba(45, 99, 255, 0.10);
+      color: #1a4bc8;
+      border: 1px solid rgba(45, 99, 255, 0.16);
+      font-size: 0.86rem;
+      font-weight: 700;
+    }
+
+    .timeline-wrap {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 18px;
+    }
+
+    .timeline-card {
+      border-top: 6px solid var(--blue);
+    }
+
+    .timeline-card:nth-child(2) {
+      border-top-color: var(--red);
+    }
+
+    .timeline-card:nth-child(3) {
+      border-top-color: var(--green);
+    }
+
+    .timeline-card .year {
+      font-family: "JetBrains Mono", monospace;
+      font-size: 0.84rem;
+      color: #60748c;
+    }
+
+    .timeline-card h3 {
+      font-size: 1.35rem;
+      margin: 8px 0 10px;
+    }
+
+    .table {
+      display: grid;
+      gap: 10px;
+    }
+
+    .row {
+      display: grid;
+      gap: 12px;
+      align-items: center;
+      padding: 12px 14px;
+      border-radius: 16px;
+      background: rgba(255, 255, 255, 0.78);
+      border: 1px solid rgba(20, 33, 50, 0.08);
+      font-size: 0.96rem;
+    }
+
+    .row.header {
+      background: rgba(16, 32, 52, 0.94);
+      color: #f3f8ff;
+      font-weight: 700;
+    }
+
+    .row.models {
+      grid-template-columns: 1.4fr repeat(4, 0.8fr);
+    }
+
+    .row.transfer {
+      grid-template-columns: 1.2fr repeat(4, 0.85fr);
+    }
+
+    .strong {
+      font-weight: 800;
+      color: #143760;
+    }
+
+    .img-frame {
+      border-radius: 22px;
+      overflow: hidden;
+      background: rgba(255, 255, 255, 0.92);
+      border: 1px solid rgba(20, 33, 50, 0.08);
+      box-shadow: var(--shadow);
+      min-height: 210px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .img-frame img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      display: block;
+      background: #fff;
+    }
+
+    .flow {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 12px;
+      align-items: stretch;
+    }
+
+    .flow-step {
+      position: relative;
+      padding: 16px 14px;
+      border-radius: 18px;
+      background: rgba(255, 255, 255, 0.82);
+      border: 1px solid rgba(20, 33, 50, 0.09);
+      min-height: 124px;
+    }
+
+    .flow-step::after {
+      content: "→";
+      position: absolute;
+      right: -12px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: #7691bb;
+      font-weight: 800;
+      font-size: 1.4rem;
+    }
+
+    .flow-step:last-child::after {
+      content: "";
+    }
+
+    .flow-step .step {
+      font-family: "JetBrains Mono", monospace;
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      color: #60748c;
+    }
+
+    .flow-step .title {
+      margin-top: 10px;
+      font-weight: 800;
+      color: #143760;
+    }
+
+    .flow-step p {
+      margin-top: 8px;
+      font-size: 0.92rem;
+      line-height: 1.5;
+    }
+
+    ul.clean {
+      margin: 0;
+      padding-left: 20px;
+      line-height: 1.56;
+      color: var(--ink);
+      font-size: 0.98rem;
+    }
+
+    ul.clean li + li {
+      margin-top: 8px;
+    }
+
+    .callout {
+      padding: 16px 18px;
+      border-radius: 18px;
+      background: rgba(16, 142, 116, 0.10);
+      border: 1px solid rgba(16, 142, 116, 0.16);
+      color: #13584d;
+      font-weight: 700;
+      line-height: 1.55;
+    }
+
+    .warning {
+      background: rgba(213, 90, 42, 0.10);
+      border-color: rgba(213, 90, 42, 0.16);
+      color: #8f3c1b;
+    }
+
+    .footer {
+      padding-top: 14px;
+      display: flex;
+      justify-content: space-between;
+      gap: 20px;
+      border-top: 1px solid var(--line);
+      font-size: 0.86rem;
+      color: #60748c;
+    }
+
+    .progress {
+      position: fixed;
+      left: 0;
+      bottom: 0;
+      width: 100%;
+      height: 6px;
+      background: rgba(20, 33, 50, 0.12);
+    }
+
+    .progress-bar {
+      height: 100%;
+      width: 0;
+      background: linear-gradient(90deg, var(--blue), var(--cyan));
+      transition: width 320ms ease;
+    }
+
+    .controls {
+      position: fixed;
+      right: 18px;
+      bottom: 18px;
+      display: flex;
+      gap: 8px;
+      z-index: 10;
+    }
+
+    .controls button {
+      border: 0;
+      border-radius: 999px;
+      padding: 10px 14px;
+      background: rgba(16, 32, 52, 0.92);
+      color: #fff;
+      cursor: pointer;
+      font-weight: 700;
+      box-shadow: 0 10px 20px rgba(16, 32, 52, 0.2);
+    }
+
+    @media (max-width: 1100px) {
+      .slide {
+        grid-template-columns: 1fr;
+      }
+
+      .rail {
+        display: none;
+      }
+
+      .hero-layout,
+      .grid-2,
+      .grid-3,
+      .grid-4,
+      .timeline-wrap,
+      .flow {
+        grid-template-columns: 1fr;
+      }
+
+      .row.models,
+      .row.transfer {
+        grid-template-columns: 1fr;
+      }
+
+      html, body {
+        overflow: auto;
+      }
+
+      .slide {
+        position: relative;
+        min-height: 100vh;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="deck">
+    <section class="slide active" data-step="1">
+      <aside class="rail">
+        <div>
+          <div class="eyebrow">IT5006 Phase 3</div>
+          <div class="slide-no">01</div>
+          <div class="track">
+            <span class="active-step">Overview</span>
+            <span>Task</span>
+            <span>Data</span>
+            <span>Benchmark</span>
+            <span>Demo</span>
+          </div>
+        </div>
+        <div class="rail-bottom">
+          <div class="chip">10 min presentation</div>
+          <div class="chip">5 min Q&amp;A</div>
+          <div class="chip">Chicago + NIBRS</div>
+        </div>
+      </aside>
+      <div class="content">
+        <div class="topline">
+          <div class="kicker">Team 22 · Predictive Policing Proof-of-Concept</div>
+          <div class="meta">April 2026 · Final pre deck</div>
+        </div>
+        <div class="body">
+          <div class="hero-layout">
+            <div class="hero-card accent-card">
+              <h1>Chicago Crime Intel</h1>
+              <p class="lede">
+                An end-to-end pipeline that models <strong>district-hour crime occurrence</strong>,
+                compares baseline models fairly, and deploys a live decision-support demo with
+                external NIBRS generalization evidence.
+              </p>
+              <div class="pill-row">
+                <span class="pill">2015-2024 train</span>
+                <span class="pill">2025 holdout</span>
+                <span class="pill">TX / CO NIBRS 2024</span>
+              </div>
+            </div>
+            <div class="hero-card">
+              <div class="hero-big">3 outcomes</div>
+              <div class="agenda">
+                <div class="agenda-item"><span class="agenda-no">01</span><span>Reproducible district-hour pipeline</span></div>
+                <div class="agenda-item"><span class="agenda-no">02</span><span>Benchmark comparison led by HistGradientBoosting</span></div>
+                <div class="agenda-item"><span class="agenda-no">03</span><span>Streamlit demo plus external NIBRS transfer test</span></div>
+              </div>
+            </div>
+          </div>
+          <div class="grid-4">
+            <div class="stat-card">
+              <div class="label">Modeling rows</div>
+              <div class="value">2.22M</div>
+              <div class="note">Chicago district-hour table</div>
+            </div>
+            <div class="stat-card">
+              <div class="label">Best test AUROC</div>
+              <div class="value">0.738</div>
+              <div class="note">HistGradientBoosting on 2025</div>
+            </div>
+            <div class="stat-card">
+              <div class="label">External states</div>
+              <div class="value">2</div>
+              <div class="note">Texas and Colorado NIBRS</div>
+            </div>
+            <div class="stat-card">
+              <div class="label">Live app modes</div>
+              <div class="value">4</div>
+              <div class="note">Dashboard, prediction, places, transfer</div>
+            </div>
+          </div>
+        </div>
+        <div class="footer">
+          <span>Target pacing: 45 seconds</span>
+          <span>1 / 10</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="slide" data-step="2">
+      <aside class="rail">
+        <div>
+          <div class="eyebrow">Task Definition</div>
+          <div class="slide-no">02</div>
+          <div class="track">
+            <span>Overview</span>
+            <span class="active-step">Task</span>
+            <span>Pipeline</span>
+            <span>Results</span>
+          </div>
+        </div>
+        <div class="rail-bottom">
+          <div class="chip">Binary classification</div>
+          <div class="chip">Natural negatives</div>
+        </div>
+      </aside>
+      <div class="content">
+        <div class="topline">
+          <div class="kicker">Problem Framing</div>
+          <div class="meta">From event rows to district-hour cells</div>
+        </div>
+        <div class="body">
+          <h2>We model occurrence risk, not exact incidents</h2>
+          <div class="equation">P(Y = 1 | X), where Y = 1 means at least one crime occurs in a district-hour cell</div>
+          <div class="grid-2">
+            <div class="accent-card card">
+              <h3>Why district-hour is our final setup</h3>
+              <ul class="clean">
+                <li>It creates <strong>natural positive and negative labels</strong> from the space-time grid.</li>
+                <li>It avoids the earlier workaround of copying event rows to synthesize negatives.</li>
+                <li>It is more operationally interpretable than record-level prediction.</li>
+                <li>It aligns cleanly with chronological evaluation and rolling history features.</li>
+              </ul>
+            </div>
+            <div class="card">
+              <h3>What we explicitly do not claim</h3>
+              <ul class="clean">
+                <li>We do not predict the exact crime type of a future incident.</li>
+                <li>We do not automate enforcement decisions.</li>
+                <li>We do not interpret feature importance as causal evidence.</li>
+                <li>We present the system as a <strong>human-in-the-loop planning aid</strong>.</li>
+              </ul>
+            </div>
+          </div>
+          <div class="callout">
+            This reframing is the biggest methodological improvement in the final project: the label definition is cleaner, the evaluation setup is more defendable, and the story is easier to explain in 10 minutes.
+          </div>
+        </div>
+        <div class="footer">
+          <span>Target pacing: 55 seconds</span>
+          <span>2 / 10</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="slide" data-step="3">
+      <aside class="rail">
+        <div>
+          <div class="eyebrow">Data Strategy</div>
+          <div class="slide-no">03</div>
+          <div class="track">
+            <span>Task</span>
+            <span class="active-step">Data</span>
+            <span>Chicago</span>
+            <span>NIBRS</span>
+          </div>
+        </div>
+        <div class="rail-bottom">
+          <div class="chip">Train locally</div>
+          <div class="chip">Test externally</div>
+        </div>
+      </aside>
+      <div class="content">
+        <div class="topline">
+          <div class="kicker">Dataset and Split Policy</div>
+          <div class="meta">Consistent with the course’s development vs. generalization strategy</div>
+        </div>
+        <div class="body">
+          <h2>Chicago for model development, NIBRS for transfer testing</h2>
+          <div class="timeline-wrap">
+            <div class="timeline-card">
+              <div class="year">Chicago development</div>
+              <h3>2015-2024 train</h3>
+              <p>2,217,936 district-hour rows, 23 distinct districts, 37 engineered features after preprocessing.</p>
+            </div>
+            <div class="timeline-card">
+              <div class="year">Chicago holdout</div>
+              <h3>2025 validation + test</h3>
+              <p>Chronological holdout split to avoid leaking future behavior into training.</p>
+            </div>
+            <div class="timeline-card">
+              <div class="year">External generalization</div>
+              <h3>NIBRS 2023-2024</h3>
+              <p>2023 provides warm-up history; 2024 is the external evaluation year for Texas and Colorado.</p>
+            </div>
+          </div>
+          <div class="grid-3">
+            <div class="card">
+              <h3>Chicago modeling table</h3>
+              <ul class="clean">
+                <li>Total rows: <span class="strong">2,217,936</span></li>
+                <li>Positive rows: <span class="strong">1,409,469</span></li>
+                <li>Negative rows: <span class="strong">808,467</span></li>
+                <li>Positive rate: <span class="strong">0.6355</span></li>
+              </ul>
+            </div>
+            <div class="card">
+              <h3>Texas NIBRS</h3>
+              <ul class="clean">
+                <li>Prepared rows: <span class="strong">4,815,408</span></li>
+                <li>Positive rows: <span class="strong">865,675</span></li>
+                <li>Distinct counties: <span class="strong">310</span></li>
+                <li>Evaluation year: <span class="strong">2024</span></li>
+              </ul>
+            </div>
+            <div class="card">
+              <h3>Colorado NIBRS</h3>
+              <ul class="clean">
+                <li>Prepared rows: <span class="strong">1,134,360</span></li>
+                <li>Positive rows: <span class="strong">231,715</span></li>
+                <li>Distinct counties: <span class="strong">71</span></li>
+                <li>Evaluation year: <span class="strong">2024</span></li>
+              </ul>
+            </div>
+          </div>
+        </div>
+        <div class="footer">
+          <span>Target pacing: 60 seconds</span>
+          <span>3 / 10</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="slide" data-step="4">
+      <aside class="rail">
+        <div>
+          <div class="eyebrow">Pipeline</div>
+          <div class="slide-no">04</div>
+          <div class="track">
+            <span>Data</span>
+            <span class="active-step">Pipeline</span>
+            <span>Leakage control</span>
+            <span>Demo</span>
+          </div>
+        </div>
+        <div class="rail-bottom">
+          <div class="chip">Reproducible</div>
+          <div class="chip">Single code path</div>
+        </div>
+      </aside>
+      <div class="content">
+        <div class="topline">
+          <div class="kicker">System Architecture</div>
+          <div class="meta">Same processing logic powers training, evaluation, and demo</div>
+        </div>
+        <div class="body">
+          <h2>From yearly archives to a deployed demo</h2>
+          <div class="flow">
+            <div class="flow-step">
+              <div class="step">Step 01</div>
+              <div class="title">Yearly ZIP archives</div>
+              <p>Chicago yearly files in <code>apps/dashboard/split_data_by_year/</code>.</p>
+            </div>
+            <div class="flow-step">
+              <div class="step">Step 02</div>
+              <div class="title">Dataset builder</div>
+              <p><code>src/data/dataset_builder.py</code> builds explicit district-hour rows.</p>
+            </div>
+            <div class="flow-step">
+              <div class="step">Step 03</div>
+              <div class="title">Shared processor</div>
+              <p><code>src/data/processor.py</code> adds temporal, spatial, and rolling-history features.</p>
+            </div>
+            <div class="flow-step">
+              <div class="step">Step 04</div>
+              <div class="title">Model training</div>
+              <p>Logistic Regression, Decision Tree, Random Forest, and HistGradientBoosting.</p>
+            </div>
+            <div class="flow-step">
+              <div class="step">Step 05</div>
+              <div class="title">Evaluation + app</div>
+              <p>Metrics, feature importance, transfer testing, and the Streamlit interface.</p>
+            </div>
+          </div>
+          <div class="grid-2">
+            <div class="card">
+              <h3>Leakage control</h3>
+              <ul class="clean">
+                <li>Chronological split: train on 2015-2024, hold out 2025.</li>
+                <li>Rolling counts use only history before time <code>T</code>.</li>
+                <li>Post-incident fields are not used as predictors.</li>
+                <li>NIBRS transfer uses Chicago-fitted preprocessing statistics with passthrough spatial bounds.</li>
+              </ul>
+            </div>
+            <div class="accent-card card">
+              <h3>Key engineering files</h3>
+              <ul class="clean">
+                <li><code>src/scripts/train.py</code></li>
+                <li><code>src/scripts/evaluate_phase2.py</code></li>
+                <li><code>src/scripts/prepare_nibrs_generalization_data.py</code></li>
+                <li><code>src/scripts/evaluate_nibrs_generalization.py</code></li>
+                <li><code>apps/dashboard/app.py</code></li>
+              </ul>
+            </div>
+          </div>
+        </div>
+        <div class="footer">
+          <span>Target pacing: 65 seconds</span>
+          <span>4 / 10</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="slide" data-step="5">
+      <aside class="rail">
+        <div>
+          <div class="eyebrow">EDA</div>
+          <div class="slide-no">05</div>
+          <div class="track">
+            <span>Pipeline</span>
+            <span class="active-step">EDA</span>
+            <span>Patterns</span>
+            <span>Motivation</span>
+          </div>
+        </div>
+        <div class="rail-bottom">
+          <div class="chip">Historical context</div>
+          <div class="chip">Visual evidence</div>
+        </div>
+      </aside>
+      <div class="content">
+        <div class="topline">
+          <div class="kicker">Exploratory Evidence</div>
+          <div class="meta">The dashboard story should make the model feel grounded in real patterns</div>
+        </div>
+        <div class="body">
+          <h2>Chicago crime data shows clear temporal rhythm and spatial concentration</h2>
+          <div class="grid-2">
+            <div class="img-frame">
+              <img src="../artifacts/overview_grid.png" alt="EDA overview grid">
+            </div>
+            <div class="grid-2" style="grid-template-columns: 1fr;">
+              <div class="img-frame">
+                <img src="../artifacts/figures/crime_trend_hourly.png" alt="Hourly trend">
+              </div>
+              <div class="img-frame">
+                <img src="../artifacts/figures/crime_spatial_distribution.png" alt="Spatial distribution">
+              </div>
+            </div>
+          </div>
+          <div class="grid-3">
+            <div class="card">
+              <h3>Temporal pattern</h3>
+              <p>Hourly and weekday structure is visible enough to justify cyclical temporal features.</p>
+            </div>
+            <div class="card">
+              <h3>Spatial pattern</h3>
+              <p>Incidents are not uniformly distributed; district identity remains informative.</p>
+            </div>
+            <div class="card">
+              <h3>Modeling implication</h3>
+              <p>The benchmark should exploit both recency and local context rather than only one-off event rows.</p>
+            </div>
+          </div>
+        </div>
+        <div class="footer">
+          <span>Target pacing: 55 seconds</span>
+          <span>5 / 10</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="slide" data-step="6">
+      <aside class="rail">
+        <div>
+          <div class="eyebrow">Benchmark</div>
+          <div class="slide-no">06</div>
+          <div class="track">
+            <span>EDA</span>
+            <span class="active-step">Benchmark</span>
+            <span>Comparison</span>
+            <span>Selection</span>
+          </div>
+        </div>
+        <div class="rail-bottom">
+          <div class="chip">Fair baselines</div>
+          <div class="chip">Small margin</div>
+        </div>
+      </aside>
+      <div class="content">
+        <div class="topline">
+          <div class="kicker">Model Results</div>
+          <div class="meta">Validation and test metrics on the 2025 Chicago holdout</div>
+        </div>
+        <div class="body">
+          <h2>HistGradientBoosting is best overall, but not by a dramatic margin</h2>
+          <div class="table">
+            <div class="row header models">
+              <div>Model</div>
+              <div>Val AUROC</div>
+              <div>Test AUROC</div>
+              <div>Val AUPRC</div>
+              <div>Test AUPRC</div>
+            </div>
+            <div class="row models">
+              <div>Logistic Regression</div>
+              <div>0.7186</div>
+              <div>0.7177</div>
+              <div>0.7792</div>
+              <div>0.7867</div>
+            </div>
+            <div class="row models">
+              <div>Decision Tree</div>
+              <div>0.7362</div>
+              <div>0.7334</div>
+              <div>0.7950</div>
+              <div>0.8003</div>
+            </div>
+            <div class="row models">
+              <div>Random Forest</div>
+              <div>0.7402</div>
+              <div>0.7370</div>
+              <div>0.8001</div>
+              <div>0.8056</div>
+            </div>
+            <div class="row models">
+              <div><span class="strong">HistGradientBoosting</span></div>
+              <div><span class="strong">0.7412</span></div>
+              <div><span class="strong">0.7381</span></div>
+              <div><span class="strong">0.8011</span></div>
+              <div><span class="strong">0.8063</span></div>
+            </div>
+          </div>
+          <div class="grid-3">
+            <div class="card">
+              <h3>Why this benchmark is useful</h3>
+              <p>All four models are plausible baselines, so the comparison is not cherry-picked.</p>
+            </div>
+            <div class="accent-card card">
+              <h3>Best model</h3>
+              <p>We use <strong>HistGradientBoosting</strong> as the deployed benchmark because it is the strongest on both AUROC and AUPRC.</p>
+            </div>
+            <div class="card">
+              <h3>Honest takeaway</h3>
+              <p>The performance gap over Random Forest is small, so we avoid overselling a “winner takes all” story.</p>
+            </div>
+          </div>
+        </div>
+        <div class="footer">
+          <span>Target pacing: 65 seconds</span>
+          <span>6 / 10</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="slide" data-step="7">
+      <aside class="rail">
+        <div>
+          <div class="eyebrow">Interpretation</div>
+          <div class="slide-no">07</div>
+          <div class="track">
+            <span>Benchmark</span>
+            <span class="active-step">Interpretation</span>
+            <span>Feature importance</span>
+            <span>Alignment</span>
+          </div>
+        </div>
+        <div class="rail-bottom">
+          <div class="chip">Temporal dominant</div>
+          <div class="chip">Interpretable</div>
+        </div>
+      </aside>
+      <div class="content">
+        <div class="topline">
+          <div class="kicker">What the Model Learns</div>
+          <div class="meta">Feature importance and aggregate alignment tell a more complete story than AUROC alone</div>
+        </div>
+        <div class="body">
+          <h2>Temporal structure dominates, but spatial and history still matter</h2>
+          <div class="grid-2">
+            <div class="img-frame">
+              <img src="../artifacts/metrics/feature_importance/hist_gradient_boosting_feature_importance_top15.png" alt="HistGradientBoosting feature importance">
+            </div>
+            <div class="grid-2" style="grid-template-columns: 1fr;">
+              <div class="card">
+                <h3>Top features</h3>
+                <ul class="clean">
+                  <li><strong>hour</strong> and <strong>hour_sin</strong></li>
+                  <li><strong>District</strong></li>
+                  <li><strong>crimes_last_30d</strong> and <strong>crimes_last_14d</strong></li>
+                  <li><strong>day_of_week</strong></li>
+                </ul>
+              </div>
+              <div class="card">
+                <h3>Grouped importance share</h3>
+                <ul class="clean">
+                  <li>Temporal: <span class="strong">65.9%</span></li>
+                  <li>Historical: <span class="strong">20.1%</span></li>
+                  <li>Spatial: <span class="strong">14.0%</span></li>
+                </ul>
+              </div>
+              <div class="accent-card card">
+                <h3>Aggregate alignment</h3>
+                <ul class="clean">
+                  <li>Test hourly correlation: <span class="strong">0.9900</span></li>
+                  <li>Test district correlation: <span class="strong">0.9996</span></li>
+                  <li>Top-5 district overlap: <span class="strong">1.0</span></li>
+                </ul>
+              </div>
+            </div>
+          </div>
+          <div class="callout">
+            Our interpretation is no longer “spatial ranking is weak everywhere.” A more accurate statement is: the refactored district-hour benchmark is strong within Chicago, while cross-jurisdiction transfer is harder spatially than temporally.
+          </div>
+        </div>
+        <div class="footer">
+          <span>Target pacing: 70 seconds</span>
+          <span>7 / 10</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="slide" data-step="8">
+      <aside class="rail">
+        <div>
+          <div class="eyebrow">Generalization</div>
+          <div class="slide-no">08</div>
+          <div class="track">
+            <span>Interpretation</span>
+            <span class="active-step">NIBRS</span>
+            <span>Transfer</span>
+            <span>Robustness</span>
+          </div>
+        </div>
+        <div class="rail-bottom">
+          <div class="chip">Texas</div>
+          <div class="chip">Colorado</div>
+        </div>
+      </aside>
+      <div class="content">
+        <div class="topline">
+          <div class="kicker">External Validation</div>
+          <div class="meta">Chicago-trained model evaluated on NIBRS county-hour datasets in 2024</div>
+        </div>
+        <div class="body">
+          <h2>The benchmark transfers meaningfully, but spatial transfer is uneven</h2>
+          <div class="table">
+            <div class="row header transfer">
+              <div>State</div>
+              <div>Rows</div>
+              <div>AUROC</div>
+              <div>AUPRC</div>
+              <div>County Corr / Hourly Corr</div>
+            </div>
+            <div class="row transfer">
+              <div><span class="strong">Colorado 2024</span></div>
+              <div>561,744</div>
+              <div><span class="strong">0.8203</span></div>
+              <div><span class="strong">0.6243</span></div>
+              <div>0.5237 / 0.9728</div>
+            </div>
+            <div class="row transfer">
+              <div><span class="strong">Texas 2024</span></div>
+              <div>2,368,296</div>
+              <div><span class="strong">0.8229</span></div>
+              <div><span class="strong">0.4327</span></div>
+              <div>0.0801 / 0.9209</div>
+            </div>
+          </div>
+          <div class="grid-3">
+            <div class="card">
+              <h3>What stays strong</h3>
+              <p>Discrimination metrics remain meaningful outside Chicago, so the model is not learning only one city’s idiosyncrasies.</p>
+            </div>
+            <div class="accent-card card">
+              <h3>What weakens</h3>
+              <p>County-level correlation drops much more than hourly correlation, especially in Texas.</p>
+            </div>
+            <div class="card">
+              <h3>How to present it</h3>
+              <p>Use transfer results as evidence of <strong>robustness in timing signals</strong>, not as proof of universal hotspot ranking.</p>
+            </div>
+          </div>
+          <div class="callout">
+            This slide directly answers the course requirement on generalizability across jurisdictions and contexts: we trained in Chicago, then evaluated externally on two NIBRS states.
+          </div>
+        </div>
+        <div class="footer">
+          <span>Target pacing: 70 seconds</span>
+          <span>8 / 10</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="slide" data-step="9">
+      <aside class="rail">
+        <div>
+          <div class="eyebrow">Deployment</div>
+          <div class="slide-no">09</div>
+          <div class="track">
+            <span>Generalization</span>
+            <span class="active-step">Demo</span>
+            <span>Workflow</span>
+            <span>Pre plan</span>
+          </div>
+        </div>
+        <div class="rail-bottom">
+          <div class="chip">Streamlit</div>
+          <div class="chip">Live walkthrough</div>
+        </div>
+      </aside>
+      <div class="content">
+        <div class="topline">
+          <div class="kicker">Demo System</div>
+          <div class="meta">The app is now strong enough to support the story, not just show a static artifact</div>
+        </div>
+        <div class="body">
+          <h2>Our dashboard now supports both local prediction and NIBRS transfer storytelling</h2>
+          <div class="grid-2">
+            <div class="accent-card card">
+              <h3>Current app pages</h3>
+              <ul class="clean">
+                <li><strong>Dashboard</strong> for historical exploration</li>
+                <li><strong>Prediction Demo</strong> for one district / date / hour input</li>
+                <li><strong>High-Risk Places</strong> for full-city district ranking</li>
+                <li><strong>NIBRS Generalization Results</strong> for external validation summary</li>
+              </ul>
+            </div>
+            <div class="card">
+              <h3>Recommended 60-second live sequence</h3>
+              <ul class="clean">
+                <li>Open the welcome page and mention the four modes.</li>
+                <li>Click Dashboard and show map + time trend.</li>
+                <li>Switch to Prediction Demo and enter one district-hour.</li>
+                <li>Show probability, risk band, and recent positive-hour counts.</li>
+                <li>Finish on the NIBRS page to show external transfer evidence.</li>
+              </ul>
+            </div>
+          </div>
+          <div class="grid-3">
+            <div class="card">
+              <h3>What the demo proves</h3>
+              <p>The pipeline is not only trainable offline; it also powers an interactive front end.</p>
+            </div>
+            <div class="card">
+              <h3>What the audience should notice</h3>
+              <p>Outputs are interpretable, bounded, and tied back to the same preprocessing logic used in training.</p>
+            </div>
+            <div class="card">
+              <h3>What not to overclaim</h3>
+              <p>The app is a proof-of-concept interface, not a policy-ready deployment.</p>
+            </div>
+          </div>
+        </div>
+        <div class="footer">
+          <span>Target pacing: 55 seconds</span>
+          <span>9 / 10</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="slide" data-step="10">
+      <aside class="rail">
+        <div>
+          <div class="eyebrow">Closing</div>
+          <div class="slide-no">10</div>
+          <div class="track">
+            <span>Demo</span>
+            <span class="active-step">Wrap-up</span>
+            <span>Q&amp;A</span>
+          </div>
+        </div>
+        <div class="rail-bottom">
+          <div class="chip">Thank you</div>
+          <div class="chip">Questions</div>
+        </div>
+      </aside>
+      <div class="content">
+        <div class="topline">
+          <div class="kicker">Conclusion and Q&amp;A</div>
+          <div class="meta">Three takeaways to leave with the audience</div>
+        </div>
+        <div class="body">
+          <div class="grid-2">
+            <div class="accent-card card">
+              <h2>What we delivered</h2>
+              <ul class="clean" style="margin-top: 16px;">
+                <li>A reproducible district-hour benchmark on Chicago crime data</li>
+                <li>A fair four-model comparison led slightly by HistGradientBoosting</li>
+                <li>An HTML/Streamlit presentation layer with external NIBRS transfer evidence</li>
+              </ul>
+            </div>
+            <div class="card">
+              <h3>Likely Q&amp;A points</h3>
+              <ul class="clean">
+                <li>Why district-hour instead of event rows?</li>
+                <li>Why chronological split instead of random split?</li>
+                <li>Why 7, 14, 30, and 90-day windows?</li>
+                <li>Why does transfer stay strong temporally but weaken spatially?</li>
+                <li>Can this be used in the real world today?</li>
+              </ul>
+            </div>
+          </div>
+          <div class="callout warning">
+            Final wording to keep consistent: this is a <strong>decision-support proof-of-concept</strong>. It shows meaningful predictive structure and cross-jurisdiction transfer, but it is not a production policing system.
+          </div>
+        </div>
+        <div class="footer">
+          <span>Target pacing: 45 seconds, then move into 5-minute Q&amp;A</span>
+          <span>10 / 10</span>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <div class="progress">
+    <div class="progress-bar" id="progressBar"></div>
+  </div>
+
+  <div class="controls">
+    <button type="button" id="prevBtn">← Prev</button>
+    <button type="button" id="nextBtn">Next →</button>
+  </div>
+
+  <script>
+    const slides = Array.from(document.querySelectorAll(".slide"));
+    const progressBar = document.getElementById("progressBar");
+    const prevBtn = document.getElementById("prevBtn");
+    const nextBtn = document.getElementById("nextBtn");
+    let index = 0;
+
+    function showSlide(nextIndex) {
+      index = (nextIndex + slides.length) % slides.length;
+      slides.forEach((slide, i) => slide.classList.toggle("active", i === index));
+      progressBar.style.width = `${((index + 1) / slides.length) * 100}%`;
+      document.title = `Team 22 Presentation · ${index + 1}/${slides.length}`;
+    }
+
+    function goNext() {
+      showSlide(index + 1);
+    }
+
+    function goPrev() {
+      showSlide(index - 1);
+    }
+
+    prevBtn.addEventListener("click", goPrev);
+    nextBtn.addEventListener("click", goNext);
+
+    document.addEventListener("keydown", (event) => {
+      if (["ArrowRight", "ArrowDown", " ", "PageDown", "j", "J"].includes(event.key)) {
+        event.preventDefault();
+        goNext();
+      }
+      if (["ArrowLeft", "ArrowUp", "PageUp", "k", "K"].includes(event.key)) {
+        event.preventDefault();
+        goPrev();
+      }
+      if (/^[1-9]$/.test(event.key)) {
+        const target = Number(event.key) - 1;
+        if (target < slides.length) {
+          showSlide(target);
+        }
+      }
+      if (event.key === "0" && slides.length >= 10) {
+        showSlide(9);
+      }
+    });
+
+    let touchStartX = 0;
+    document.addEventListener("touchstart", (event) => {
+      touchStartX = event.changedTouches[0].screenX;
+    }, { passive: true });
+
+    document.addEventListener("touchend", (event) => {
+      const touchEndX = event.changedTouches[0].screenX;
+      const delta = touchEndX - touchStartX;
+      if (Math.abs(delta) > 40) {
+        if (delta < 0) {
+          goNext();
+        } else {
+          goPrev();
+        }
+      }
+    }, { passive: true });
+
+    showSlide(0);
+  </script>
+</body>
+</html>

@@ -219,3 +219,5 @@ artifacts/models/*.pkl
 artifacts/models/*.pt
 artifacts/metrics/predictions/*.csv
 Team22_IT5006_Predictive_Policing_AY2526Sem2/
+NIBRS data/
+apps/dashboard/split_data_by_year/*.zip

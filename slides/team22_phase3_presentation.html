@@ -303,6 +303,65 @@
       background: white;
     }
 
+    .interpret-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 18px;
+      align-items: stretch;
+    }
+
+    .interpret-figures {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 18px;
+      align-items: stretch;
+    }
+
+    .figure-card {
+      background: rgba(255, 255, 255, 0.86);
+      border: 1px solid rgba(217, 210, 194, 0.95);
+      border-radius: 20px;
+      padding: 14px;
+      display: grid;
+      gap: 10px;
+      min-height: 0;
+    }
+
+    .figure-card img {
+      width: 100%;
+      min-height: 0;
+      height: 100%;
+      object-fit: contain;
+      border-radius: 16px;
+      background: white;
+      border: 1px solid rgba(217, 210, 194, 0.95);
+    }
+
+    .figure-card h3 {
+      margin: 0;
+      font-size: 16px;
+      color: var(--navy);
+    }
+
+    .feature-card img {
+      max-height: 320px;
+    }
+
+    .mini-card {
+      padding: 12px;
+      gap: 8px;
+    }
+
+    .mini-card img {
+      max-height: 320px;
+    }
+
+    .figure-note {
+      font-size: 14px;
+      line-height: 1.45;
+      color: var(--muted);
+    }
+
     .demo-link {
       color: var(--blue);
       text-decoration: none;
@@ -624,20 +683,34 @@
       <div class="sheet">
         <div class="kicker">Interpretation</div>
         <h2>What Drives Predictions?</h2>
-        <div class="visual-grid">
-          <img src="../artifacts/overview_grid.png" alt="EDA overview grid" />
+        <div class="interpret-grid">
+          <div class="interpret-figures">
+            <div class="figure-card feature-card">
+              <h3>Feature importance of the best model</h3>
+              <img src="../artifacts/metrics/feature_importance/hist_gradient_boosting_feature_importance_top15.png" alt="HistGradientBoosting feature importance" />
+              <p class="figure-note">The clearest evidence for what the model actually uses: <strong>hour</strong>, cyclical hour features, district identity, and rolling recent counts.</p>
+            </div>
+            <div class="figure-card mini-card">
+              <h3>Hourly crime rhythm</h3>
+              <img src="../artifacts/figures/crime_trend_hourly.png" alt="Crime trend by hour" />
+              <p class="figure-note">A visible daily cycle explains why temporal features dominate prediction quality.</p>
+            </div>
+          </div>
           <div class="panel">
             <div class="badge">Best-model feature importance</div>
             <ul>
-              <li>Temporal features contribute about <strong>94.27%</strong> of grouped permutation importance.</li>
-              <li>Spatial features contribute about <strong>4.08%</strong>.</li>
-              <li>Historical features contribute about <strong>1.36%</strong>.</li>
+              <li>Temporal features contribute about <strong>65.9%</strong> of grouped permutation importance.</li>
+              <li>Historical features contribute about <strong>20.1%</strong>.</li>
+              <li>Spatial features contribute about <strong>14.0%</strong>.</li>
             </ul>
-            <p style="margin-top: 14px;">Top signals for HistGradientBoosting are <strong>hour_sin</strong>, <strong>hour</strong>, <strong>day_of_week</strong>, and <strong>dow_sin</strong>. Spatial context still matters, but mostly as supporting information.</p>
+            <p style="margin-top: 14px;">Top signals for HistGradientBoosting are <strong>hour</strong>, <strong>hour_sin</strong>, <strong>District</strong>, <strong>crimes_last_30d</strong>, and <strong>crimes_last_14d</strong>.</p>
+            <p style="margin-top: 14px;">So the clean interpretation is: <strong>timing is the dominant signal</strong>, recent local history adds meaningful value, and district identity still helps anchor the model geographically.</p>
+            <p style="margin-top: 14px;">Spatial context still matters, but it plays a supporting role compared with temporal rhythm and recent history.</p>
+            <p style="margin-top: 14px;">This is also why the model transfers better on <strong>temporal alignment</strong> than on cross-jurisdiction spatial ranking in NIBRS.</p>
           </div>
         </div>
         <div class="callout">
-          Interpretation should stay descriptive, not causal. We can say temporal rhythm is the strongest predictive pattern in our benchmark, but we should not claim this explains the full social causes of crime.
+          Interpretation should stay descriptive, not causal. We can say temporal rhythm is the strongest predictive pattern in our benchmark, but we should not claim this explains the social causes of crime.
         </div>
       </div>
       <div class="footer"><span>Interpretation</span><span>7 / 10</span></div>

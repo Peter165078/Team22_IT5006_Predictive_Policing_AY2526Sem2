@@ -25,6 +25,10 @@ PREDICTION_SOURCE_DIR = PROJECT_ROOT / "apps" / "dashboard" / "split_data_by_yea
 PREDICTION_DATA_PATH = Path(tempfile.gettempdir()) / "team22_district_hour_prediction_data.csv"
 MIN_PREDICTION_DATE = pd.Timestamp("2025-01-01")
 MAX_PREDICTION_DATE = pd.Timestamp("2025-12-31")
+NIBRS_METRICS_PATH = (
+    PROJECT_ROOT / "artifacts" / "metrics" / "nibrs_generalization" / "nibrs_generalization_metrics_2024.csv"
+)
+NIBRS_BUILD_SUMMARY_PATH = PROJECT_ROOT / "data" / "raw" / "nibrs_generalization_build_summary.json"
 
 st.set_page_config(
     page_title="Chicago Crime Intel",
@@ -158,6 +162,29 @@ def metric_card(title: str, value: str, sub: str, color: str) -> None:
     )
 
 
+@st.cache_data(show_spinner=False)
+def load_nibrs_generalization_results() -> tuple[pd.DataFrame | None, dict[str, dict]]:
+    if not NIBRS_METRICS_PATH.exists():
+        return None, {}
+
+    df = pd.read_csv(NIBRS_METRICS_PATH)
+    if df.empty:
+        return df, {}
+
+    df["state"] = df["dataset"].str.extract(r"_([a-z]{2})_").iloc[:, 0].str.upper()
+    df["label"] = df["state"].map({"TX": "Texas", "CO": "Colorado"}).fillna(df["state"])
+    df["auroc_pct"] = (df["auroc"] * 100).round(1)
+    df["auprc_pct"] = (df["auprc"] * 100).round(1)
+    df["positive_rate_pct"] = (df["positive_rate"] * 100).round(1)
+
+    build_summary: dict[str, dict] = {}
+    if NIBRS_BUILD_SUMMARY_PATH.exists():
+        summary_df = pd.read_json(NIBRS_BUILD_SUMMARY_PATH)
+        for row in summary_df.to_dict(orient="records"):
+            build_summary[str(row["state"]).upper()] = row
+    return df, build_summary
+
+
 def build_prediction_dataset() -> None:
     if PREDICTION_DATA_PATH.exists():
         return
@@ -274,6 +301,73 @@ def compute_recent_district_counts(positive_raw: pd.DataFrame, target_dt: pd.Tim
     }
 
 
+def build_district_prediction_payload(
+    engine: dict,
+    target_dt: pd.Timestamp,
+    *,
+    hours: list[int] | None = None,
+) -> pd.DataFrame:
+    reference = engine["district_reference"].copy()
+    if hours is None:
+        timestamps = pd.DataFrame({"Date": [target_dt]})
+    else:
+        base_day = pd.Timestamp(target_dt).normalize()
+        timestamps = pd.DataFrame(
+            {"Date": [base_day + pd.Timedelta(hours=int(hour)) for hour in hours]}
+        )
+
+    reference["_key"] = 1
+    timestamps["_key"] = 1
+    payload = reference.merge(timestamps, on="_key", how="inner").drop(columns="_key")
+    payload = payload.rename(columns={"Community_Area": "Community Area"})
+    payload["Ward"] = payload["Ward"].round().astype(int)
+    payload["Community Area"] = payload["Community Area"].round().astype(int)
+    payload["Beat"] = payload["Beat"].round().astype(int)
+    return payload[
+        [
+            "Date",
+            "District",
+            "Ward",
+            "Community Area",
+            "Beat",
+            "Latitude",
+            "Longitude",
+            "X_Coordinate",
+            "Y_Coordinate",
+        ]
+    ].rename(
+        columns={
+            "X_Coordinate": "X Coordinate",
+            "Y_Coordinate": "Y Coordinate",
+        }
+    )
+
+
+def score_prediction_payload(engine: dict, payload: pd.DataFrame) -> pd.DataFrame:
+    X_demo, surviving_mask, _ = engine["processor"]._process(
+        payload.copy(),
+        pd.Series([0] * len(payload)),
+        is_train=False,
+    )
+    scored = payload.loc[surviving_mask].reset_index(drop=True)
+    if scored.empty:
+        return scored
+
+    X_demo = X_demo.reindex(columns=engine["feature_columns"], fill_value=0)
+    probabilities = engine["model"].predict_proba(X_demo)[:, 1]
+    scored["probability"] = probabilities
+
+    risk_labels: list[str] = []
+    risk_classes: list[str] = []
+    for probability in probabilities:
+        label, css_class = classify_risk(float(probability), engine["thresholds"])
+        risk_labels.append(label)
+        risk_classes.append(css_class)
+    scored["risk_label"] = risk_labels
+    scored["risk_class"] = risk_classes
+    return scored
+
+
 def render_welcome() -> None:
     st.markdown("<br><br>", unsafe_allow_html=True)
     col1, col2, col3 = st.columns([1, 2, 1])
@@ -295,13 +389,27 @@ def render_welcome() -> None:
         )
 
         st.markdown("<br>", unsafe_allow_html=True)
-        left, right = st.columns(2)
-        if left.button("📊 Open Dashboard", type="primary", use_container_width=True):
+        row_one_left, row_one_right = st.columns(2)
+        if row_one_left.button("📊 Open Dashboard", type="primary", use_container_width=True):
             st.session_state.app_mode = "Dashboard"
             st.rerun()
-        if right.button("🤖 Try Prediction Demo", use_container_width=True):
+        if row_one_right.button("🤖 Prediction Demo", use_container_width=True):
             st.session_state.app_mode = "Prediction Demo"
             st.rerun()
+
+        row_two_left, row_two_right = st.columns(2)
+        if row_two_left.button("📍 High-Risk Places", use_container_width=True):
+            st.session_state.app_mode = "High-Risk Places"
+            st.rerun()
+        if row_two_right.button("👥 Group Pattern Analysis", use_container_width=True):
+            st.session_state.app_mode = "Group Pattern Analysis"
+            st.rerun()
+
+        row_three_left, row_three_right = st.columns(2)
+        if row_three_left.button("🌎 NIBRS Generalization", use_container_width=True):
+            st.session_state.app_mode = "NIBRS Generalization"
+            st.rerun()
+        row_three_right.empty()
 
         st.markdown("<br>", unsafe_allow_html=True)
         st.markdown(
@@ -311,6 +419,8 @@ def render_welcome() -> None:
                 <ul>
                     <li>Interactive crime analytics dashboard</li>
                     <li>Model-backed risk prediction workflow</li>
+                    <li>District-level hotspot ranking for a chosen hour</li>
+                    <li>Aggregate daily risk-pattern analysis across districts</li>
                     <li>Basic user input validation and interpretable output</li>
                 </ul>
             </div>
@@ -341,6 +451,15 @@ def render_dashboard() -> None:
             st.rerun()
         if st.button("🤖 Prediction Demo", use_container_width=True):
             st.session_state.app_mode = "Prediction Demo"
+            st.rerun()
+        if st.button("📍 High-Risk Places", use_container_width=True):
+            st.session_state.app_mode = "High-Risk Places"
+            st.rerun()
+        if st.button("👥 Group Pattern Analysis", use_container_width=True):
+            st.session_state.app_mode = "Group Pattern Analysis"
+            st.rerun()
+        if st.button("🌎 NIBRS Generalization", use_container_width=True):
+            st.session_state.app_mode = "NIBRS Generalization"
             st.rerun()
         st.divider()
         st.title(f"Controls ({year})")
@@ -478,6 +597,15 @@ def render_prediction_demo() -> None:
             st.rerun()
         if st.button("📊 Dashboard", use_container_width=True):
             st.session_state.app_mode = "Dashboard"
+            st.rerun()
+        if st.button("📍 High-Risk Places", use_container_width=True):
+            st.session_state.app_mode = "High-Risk Places"
+            st.rerun()
+        if st.button("👥 Group Pattern Analysis", use_container_width=True):
+            st.session_state.app_mode = "Group Pattern Analysis"
+            st.rerun()
+        if st.button("🌎 NIBRS Generalization", use_container_width=True):
+            st.session_state.app_mode = "NIBRS Generalization"
             st.rerun()
         st.divider()
         st.info(
@@ -649,9 +777,524 @@ def render_prediction_demo() -> None:
     )
 
 
+def render_high_risk_places() -> None:
+    st.title("High-Risk Places")
+    st.caption(
+        "Predicting places of increased crime risk by scoring every police district for a selected hour."
+    )
+
+    try:
+        engine = load_prediction_engine()
+    except Exception as exc:
+        st.error(str(exc))
+        st.stop()
+
+    with st.sidebar:
+        st.title("Navigation")
+        if st.button("← Home", use_container_width=True):
+            st.session_state.app_mode = "Welcome"
+            st.rerun()
+        if st.button("📊 Dashboard", use_container_width=True):
+            st.session_state.app_mode = "Dashboard"
+            st.rerun()
+        if st.button("🤖 Prediction Demo", use_container_width=True):
+            st.session_state.app_mode = "Prediction Demo"
+            st.rerun()
+        if st.button("👥 Group Pattern Analysis", use_container_width=True):
+            st.session_state.app_mode = "Group Pattern Analysis"
+            st.rerun()
+        if st.button("🌎 NIBRS Generalization", use_container_width=True):
+            st.session_state.app_mode = "NIBRS Generalization"
+            st.rerun()
+        st.divider()
+        top_k = st.slider("Top districts to highlight", min_value=3, max_value=10, value=5)
+
+    control_left, control_right = st.columns([1, 1])
+    with control_left:
+        selected_date = st.date_input(
+            "Target date",
+            value=pd.Timestamp("2025-10-01").date(),
+            min_value=MIN_PREDICTION_DATE.date(),
+            max_value=MAX_PREDICTION_DATE.date(),
+            key="places_date",
+        )
+    with control_right:
+        selected_hour = st.slider(
+            "Target hour",
+            min_value=0,
+            max_value=23,
+            value=18,
+            key="places_hour",
+        )
+
+    target_dt = pd.Timestamp(selected_date).replace(hour=int(selected_hour), minute=0, second=0)
+    with st.spinner("Scoring districts for the selected hour..."):
+        payload = build_district_prediction_payload(engine, target_dt)
+        scored = score_prediction_payload(engine, payload)
+
+    if scored.empty:
+        st.error("No valid district scores were produced for the selected hour.")
+        return
+
+    scored = scored.sort_values("probability", ascending=False).reset_index(drop=True)
+    scored["rank"] = scored.index + 1
+    top_places = scored.head(top_k).copy()
+    top_places["probability_pct"] = (top_places["probability"] * 100).round(1)
+
+    top_one, top_two, top_three = st.columns(3)
+    with top_one:
+        metric_card(
+            "Highest-risk district",
+            str(int(top_places.iloc[0]["District"])),
+            top_places.iloc[0]["risk_label"],
+            "#ef4444",
+        )
+    with top_two:
+        metric_card(
+            "Top risk probability",
+            f"{top_places.iloc[0]['probability']:.3f}",
+            target_dt.strftime("%Y-%m-%d %H:%M"),
+            "#f59e0b",
+        )
+    with top_three:
+        metric_card(
+            "Districts scored",
+            f"{len(scored):,}",
+            "All available districts",
+            "#3b82f6",
+        )
+
+    st.markdown("---")
+    map_col, chart_col = st.columns([1.5, 1])
+
+    with map_col:
+        st.subheader("Predicted hotspot map")
+        map_df = scored.copy()
+        map_df["red"] = (120 + map_df["probability"] * 135).clip(0, 255).astype(int)
+        map_df["green"] = (210 - map_df["probability"] * 160).clip(40, 210).astype(int)
+        map_df["blue"] = 75
+        map_df["alpha"] = 180
+        map_df["radius"] = (250 + map_df["probability"] * 900).astype(int)
+        st.pydeck_chart(
+            pdk.Deck(
+                map_style="https://basemaps.cartocdn.com/gl/positron-gl-style/style.json",
+                initial_view_state=pdk.ViewState(latitude=41.85, longitude=-87.65, zoom=9.8),
+                layers=[
+                    pdk.Layer(
+                        "ScatterplotLayer",
+                        data=map_df,
+                        get_position="[Longitude, Latitude]",
+                        get_fill_color="[red, green, blue, alpha]",
+                        get_radius="radius",
+                        pickable=True,
+                    )
+                ],
+                tooltip={
+                    "text": "District {District}\nRisk {probability:.3f}\nLabel {risk_label}"
+                },
+            )
+        )
+
+    with chart_col:
+        st.subheader("Top districts")
+        bar = px.bar(
+            top_places.sort_values("probability"),
+            x="probability",
+            y=top_places.sort_values("probability")["District"].astype(str),
+            orientation="h",
+            color="probability",
+            color_continuous_scale="Reds",
+            labels={"probability": "Predicted probability", "y": "District"},
+        )
+        bar.update_layout(height=380, margin=dict(l=0, r=0, t=10, b=0), showlegend=False)
+        st.plotly_chart(bar, use_container_width=True)
+
+    st.markdown("---")
+    st.subheader("Top-ranked districts")
+    st.dataframe(
+        top_places[["rank", "District", "risk_label", "probability_pct"]].rename(
+            columns={
+                "rank": "Rank",
+                "District": "District",
+                "risk_label": "Risk band",
+                "probability_pct": "Probability (%)",
+            }
+        ),
+        use_container_width=True,
+        hide_index=True,
+    )
+
+    st.info(
+        "This view operationalizes the current model as a place-risk ranking tool: "
+        "for a chosen hour, every district is scored and ranked by predicted risk."
+    )
+
+
+def render_group_pattern_analysis() -> None:
+    st.title("Group Pattern Analysis")
+    st.caption(
+        "Predicting group/population crime patterns by aggregating district-hour risk across a full day."
+    )
+
+    try:
+        engine = load_prediction_engine()
+    except Exception as exc:
+        st.error(str(exc))
+        st.stop()
+
+    with st.sidebar:
+        st.title("Navigation")
+        if st.button("← Home", use_container_width=True):
+            st.session_state.app_mode = "Welcome"
+            st.rerun()
+        if st.button("📊 Dashboard", use_container_width=True):
+            st.session_state.app_mode = "Dashboard"
+            st.rerun()
+        if st.button("🤖 Prediction Demo", use_container_width=True):
+            st.session_state.app_mode = "Prediction Demo"
+            st.rerun()
+        if st.button("📍 High-Risk Places", use_container_width=True):
+            st.session_state.app_mode = "High-Risk Places"
+            st.rerun()
+        if st.button("🌎 NIBRS Generalization", use_container_width=True):
+            st.session_state.app_mode = "NIBRS Generalization"
+            st.rerun()
+        st.divider()
+        top_block_count = st.slider("Highlighted district-hour blocks", min_value=5, max_value=15, value=8)
+
+    selected_date = st.date_input(
+        "Daily outlook date",
+        value=pd.Timestamp("2025-10-01").date(),
+        min_value=MIN_PREDICTION_DATE.date(),
+        max_value=MAX_PREDICTION_DATE.date(),
+        key="group_patterns_date",
+    )
+
+    with st.spinner("Generating district-hour outlook for the full day..."):
+        payload = build_district_prediction_payload(
+            engine,
+            pd.Timestamp(selected_date),
+            hours=list(range(24)),
+        )
+        scored = score_prediction_payload(engine, payload)
+
+    if scored.empty:
+        st.error("No aggregate pattern outlook could be generated for the selected date.")
+        return
+
+    scored["Hour"] = pd.to_datetime(scored["Date"]).dt.hour
+    scored["DistrictLabel"] = scored["District"].astype(int).astype(str)
+
+    citywide_hourly = scored.groupby("Hour", as_index=False)["probability"].mean()
+    district_daily = scored.groupby("District", as_index=False)["probability"].mean().sort_values(
+        "probability", ascending=False
+    )
+    top_blocks = scored.sort_values("probability", ascending=False).head(top_block_count).copy()
+    top_blocks["Date"] = pd.to_datetime(top_blocks["Date"]).dt.strftime("%Y-%m-%d %H:%M")
+    top_blocks["probability_pct"] = (top_blocks["probability"] * 100).round(1)
+
+    top_left, top_mid, top_right = st.columns(3)
+    with top_left:
+        metric_card(
+            "Peak citywide hour",
+            f"{int(citywide_hourly.loc[citywide_hourly['probability'].idxmax(), 'Hour'])}:00",
+            "Highest mean risk",
+            "#ef4444",
+        )
+    with top_mid:
+        metric_card(
+            "Top district (daily avg)",
+            str(int(district_daily.iloc[0]["District"])),
+            f"{district_daily.iloc[0]['probability']:.3f}",
+            "#8b5cf6",
+        )
+    with top_right:
+        metric_card(
+            "District-hour blocks scored",
+            f"{len(scored):,}",
+            "24 hours x all districts",
+            "#3b82f6",
+        )
+
+    st.markdown("---")
+    chart_left, chart_right = st.columns([1.1, 1])
+    with chart_left:
+        st.subheader("Citywide hourly risk outlook")
+        line = px.line(
+            citywide_hourly,
+            x="Hour",
+            y="probability",
+            markers=True,
+            labels={"probability": "Mean predicted probability"},
+        )
+        line.update_layout(height=320, margin=dict(l=0, r=0, t=10, b=0), xaxis=dict(dtick=1))
+        st.plotly_chart(line, use_container_width=True)
+
+    with chart_right:
+        st.subheader("District daily average risk")
+        top_daily = district_daily.head(10).copy()
+        daily_bar = px.bar(
+            top_daily.sort_values("probability"),
+            x="probability",
+            y=top_daily.sort_values("probability")["District"].astype(int).astype(str),
+            orientation="h",
+            color="probability",
+            color_continuous_scale="Blues",
+            labels={"probability": "Mean predicted probability", "y": "District"},
+        )
+        daily_bar.update_layout(height=320, margin=dict(l=0, r=0, t=10, b=0), showlegend=False)
+        st.plotly_chart(daily_bar, use_container_width=True)
+
+    st.markdown("---")
+    st.subheader("District-hour heatmap")
+    heat_df = scored.copy()
+    heatmap = px.density_heatmap(
+        heat_df,
+        x="Hour",
+        y="DistrictLabel",
+        z="probability",
+        color_continuous_scale="YlOrRd",
+        histfunc="avg",
+        nbinsx=24,
+        nbinsy=len(heat_df["DistrictLabel"].unique()),
+        labels={"DistrictLabel": "District", "probability": "Mean probability"},
+    )
+    heatmap.update_layout(height=460, margin=dict(l=0, r=0, t=24, b=0), xaxis=dict(dtick=1))
+    st.plotly_chart(heatmap, use_container_width=True)
+
+    st.subheader("Highest-risk district-hour blocks")
+    st.dataframe(
+        top_blocks[["Date", "District", "risk_label", "probability_pct"]].rename(
+            columns={
+                "Date": "DateTime",
+                "District": "District",
+                "risk_label": "Risk band",
+                "probability_pct": "Probability (%)",
+            }
+        ),
+        use_container_width=True,
+        hide_index=True,
+    )
+
+    st.info(
+        "This page reframes the model as an aggregate-pattern tool: instead of scoring a single input, "
+        "it predicts how risk is distributed across districts and hours for a full day."
+    )
+
+
+def render_nibrs_generalization() -> None:
+    st.title("NIBRS Generalization Results")
+    st.caption(
+        "External validation of the Chicago-trained HistGradientBoosting benchmark on FBI NIBRS county-hour datasets."
+    )
+
+    with st.sidebar:
+        st.title("Navigation")
+        if st.button("← Home", use_container_width=True):
+            st.session_state.app_mode = "Welcome"
+            st.rerun()
+        if st.button("📊 Dashboard", use_container_width=True):
+            st.session_state.app_mode = "Dashboard"
+            st.rerun()
+        if st.button("🤖 Prediction Demo", use_container_width=True):
+            st.session_state.app_mode = "Prediction Demo"
+            st.rerun()
+        if st.button("📍 High-Risk Places", use_container_width=True):
+            st.session_state.app_mode = "High-Risk Places"
+            st.rerun()
+        if st.button("👥 Group Pattern Analysis", use_container_width=True):
+            st.session_state.app_mode = "Group Pattern Analysis"
+            st.rerun()
+        st.divider()
+        st.info(
+            "Evaluation setting:\n\n"
+            "- Train fit: Chicago 2015-2024\n"
+            "- External test: NIBRS 2024\n"
+            "- Warm-up history: NIBRS 2023"
+        )
+
+    metrics_df, build_summary = load_nibrs_generalization_results()
+    if metrics_df is None or metrics_df.empty:
+        st.error(
+            "Missing NIBRS generalization metrics. Run "
+            "`python3 src/scripts/evaluate_nibrs_generalization.py --eval-year 2024` first."
+        )
+        return
+
+    best_row = metrics_df.sort_values("auroc", ascending=False).iloc[0]
+    coverage_label = ", ".join(metrics_df["label"].tolist())
+
+    top_left, top_mid, top_right = st.columns(3)
+    with top_left:
+        metric_card(
+            "Best external AUROC",
+            f"{best_row['auroc']:.3f}",
+            f"{best_row['label']} | {int(best_row['eval_year'])}",
+            "#3b82f6",
+        )
+    with top_mid:
+        metric_card(
+            "Best external AUPRC",
+            f"{metrics_df['auprc'].max():.3f}",
+            coverage_label,
+            "#8b5cf6",
+        )
+    with top_right:
+        metric_card(
+            "External datasets",
+            f"{len(metrics_df)}",
+            coverage_label,
+            "#10b981",
+        )
+
+    st.markdown("---")
+    compare_left, compare_right = st.columns([1.05, 0.95])
+
+    with compare_left:
+        st.subheader("External benchmark comparison")
+        compare = metrics_df[["label", "auroc", "auprc"]].melt(
+            id_vars="label",
+            value_vars=["auroc", "auprc"],
+            var_name="metric",
+            value_name="score",
+        )
+        compare["metric"] = compare["metric"].map({"auroc": "AUROC", "auprc": "AUPRC"})
+        chart = px.bar(
+            compare,
+            x="label",
+            y="score",
+            color="metric",
+            barmode="group",
+            color_discrete_sequence=["#2563eb", "#c2410c"],
+            labels={"label": "State", "score": "Score", "metric": "Metric"},
+        )
+        chart.update_layout(height=340, margin=dict(l=0, r=0, t=10, b=0))
+        st.plotly_chart(chart, use_container_width=True)
+
+    with compare_right:
+        st.subheader("Temporal vs spatial transfer")
+        align = metrics_df[["label", "hourly_correlation", "county_correlation"]].melt(
+            id_vars="label",
+            value_vars=["hourly_correlation", "county_correlation"],
+            var_name="metric",
+            value_name="score",
+        )
+        align["metric"] = align["metric"].map(
+            {
+                "hourly_correlation": "Hourly correlation",
+                "county_correlation": "County correlation",
+            }
+        )
+        corr_chart = px.bar(
+            align,
+            x="label",
+            y="score",
+            color="metric",
+            barmode="group",
+            color_discrete_sequence=["#f59e0b", "#0f766e"],
+            labels={"label": "State", "score": "Correlation", "metric": "Alignment"},
+        )
+        corr_chart.update_layout(height=340, margin=dict(l=0, r=0, t=10, b=0))
+        st.plotly_chart(corr_chart, use_container_width=True)
+
+    st.markdown("---")
+    st.subheader("Dataset coverage")
+    coverage_rows: list[dict] = []
+    for _, row in metrics_df.iterrows():
+        summary = build_summary.get(str(row["state"]).upper(), {})
+        coverage_rows.append(
+            {
+                "State": row["label"],
+                "Eval Year": int(row["eval_year"]),
+                "Rows Scored": f"{int(row['rows']):,}",
+                "Positive Rate (%)": f"{row['positive_rate_pct']:.1f}",
+                "Distinct Counties": int(row.get("distinct_counties", 0)),
+                "Prepared Rows": f"{int(summary.get('rows', 0)):,}" if summary else "N/A",
+                "Prepared Positives": f"{int(summary.get('positive_rows', 0)):,}" if summary else "N/A",
+            }
+        )
+    st.dataframe(pd.DataFrame(coverage_rows), use_container_width=True, hide_index=True)
+
+    st.subheader("External metrics table")
+    display_df = metrics_df[
+        [
+            "label",
+            "eval_year",
+            "rows",
+            "positive_rate_pct",
+            "auroc",
+            "auprc",
+            "accuracy",
+            "precision",
+            "recall",
+            "f1",
+            "hourly_correlation",
+            "county_correlation",
+        ]
+    ].rename(
+        columns={
+            "label": "State",
+            "eval_year": "Eval Year",
+            "rows": "Rows",
+            "positive_rate_pct": "Positive Rate (%)",
+            "auroc": "AUROC",
+            "auprc": "AUPRC",
+            "accuracy": "Accuracy",
+            "precision": "Precision",
+            "recall": "Recall",
+            "f1": "F1",
+            "hourly_correlation": "Hourly Corr",
+            "county_correlation": "County Corr",
+        }
+    ).copy()
+    display_df["Rows"] = display_df["Rows"].map(lambda value: f"{int(value):,}")
+    for col in ["AUROC", "AUPRC", "Accuracy", "Precision", "Recall", "F1", "Hourly Corr", "County Corr"]:
+        display_df[col] = display_df[col].map(lambda value: f"{float(value):.3f}")
+    st.dataframe(display_df, use_container_width=True, hide_index=True)
+
+    st.markdown("---")
+    insight_left, insight_right = st.columns([1.05, 0.95])
+    with insight_left:
+        st.markdown(
+            """
+            <div class="sub-card">
+                <strong>What this says about transfer</strong>
+                <ul>
+                    <li>The Chicago-trained model still discriminates reasonably well on external NIBRS data.</li>
+                    <li>Hourly correlation remains much stronger than county-level correlation.</li>
+                    <li>This supports using the benchmark as a timing-oriented signal rather than a precise hotspot locator.</li>
+                </ul>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+    with insight_right:
+        state_names = " and ".join(metrics_df["label"].tolist())
+        st.markdown(
+            f"""
+            <div class="sub-card">
+                <strong>Recommended presentation wording</strong>
+                <p style="margin-top: 10px; color: #475569;">
+                    We trained the model on Chicago historical data, then tested external
+                    generalization on {state_names} NIBRS county-hour datasets for 2024.
+                    Transfer performance stays meaningful on discrimination metrics, while
+                    spatial ranking remains weaker than temporal alignment.
+                </p>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+
 if st.session_state.app_mode == "Welcome":
     render_welcome()
 elif st.session_state.app_mode == "Dashboard":
     render_dashboard()
 elif st.session_state.app_mode == "Prediction Demo":
     render_prediction_demo()
+elif st.session_state.app_mode == "High-Risk Places":
+    render_high_risk_places()
+elif st.session_state.app_mode == "Group Pattern Analysis":
+    render_group_pattern_analysis()
+elif st.session_state.app_mode == "NIBRS Generalization":
+    render_nibrs_generalization()

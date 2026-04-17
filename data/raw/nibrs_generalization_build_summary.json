@@ -1,0 +1,30 @@
+[
+  {
+    "state": "TX",
+    "years": [
+      2023,
+      2024
+    ],
+    "output_path": "/private/tmp/team22_phase3_clean/data/raw/nibrs_county_hour_tx_2023_2024.csv",
+    "rows": 4815408,
+    "positive_rows": 865675,
+    "negative_rows": 3949733,
+    "distinct_counties": 310,
+    "date_min": "2023-01-01 00:00:00",
+    "date_max": "2024-12-31 23:00:00"
+  },
+  {
+    "state": "CO",
+    "years": [
+      2023,
+      2024
+    ],
+    "output_path": "/private/tmp/team22_phase3_clean/data/raw/nibrs_county_hour_co_2023_2024.csv",
+    "rows": 1134360,
+    "positive_rows": 231715,
+    "negative_rows": 902645,
+    "distinct_counties": 71,
+    "date_min": "2023-01-01 00:00:00",
+    "date_max": "2024-12-31 23:00:00"
+  }
+]

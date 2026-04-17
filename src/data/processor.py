@@ -146,11 +146,13 @@ class DataProcessor:
         neg_ratio:    float = NEG_RATIO,
         rare_thresh:  float = RARE_THRESH,
         random_state: int   = RANDOM_STATE,
+        spatial_bounds_mode: str = "chicago",
     ) -> None:
         self.data_path    = data_path
         self.neg_ratio    = neg_ratio
         self.rare_thresh  = rare_thresh
         self.random_state = random_state
+        self.spatial_bounds_mode = spatial_bounds_mode
 
         self.raw_data:    Optional[pd.DataFrame] = None
         self.labels:      Optional[pd.Series]    = None
@@ -620,16 +622,39 @@ class DataProcessor:
         because spatial missingness is itself a meaningful signal
         (un-geocoded records cluster in certain crime types / districts).
         """
-        HARD_BOUNDS: Dict[str, Tuple[float, float]] = {
-            "District":       (1.0,   31.0),
-            "Ward":           (1.0,   50.0),
-            "Community Area": (1.0,   77.0),
-            "Beat":           (111.0, 2535.0),
-            "Latitude":       (36.0,  42.0),
-            "Longitude":      (-92.0, -88.0),
-            "X Coordinate":   (1.0,   1_205_119.0),
-            "Y Coordinate":   (1.0,   1_951_622.0),
-        }
+        if self.spatial_bounds_mode == "chicago":
+            hard_bounds: Dict[str, Tuple[float, float]] = {
+                "District":       (1.0,   31.0),
+                "Ward":           (1.0,   50.0),
+                "Community Area": (1.0,   77.0),
+                "Beat":           (111.0, 2535.0),
+                "Latitude":       (36.0,  42.0),
+                "Longitude":      (-92.0, -88.0),
+                "X Coordinate":   (1.0,   1_205_119.0),
+                "Y Coordinate":   (1.0,   1_951_622.0),
+            }
+        elif self.spatial_bounds_mode == "passthrough":
+            # External evaluation datasets may use different jurisdiction IDs
+            # or omit Chicago-specific coordinate systems entirely.
+            hard_bounds = {
+                "Latitude":       (-90.0, 90.0),
+                "Longitude":      (-180.0, 180.0),
+            }
+        else:
+            raise ValueError(
+                "spatial_bounds_mode must be either 'chicago' or 'passthrough', "
+                f"got {self.spatial_bounds_mode!r}"
+            )
+        SPATIAL_COLS = [
+            "District",
+            "Ward",
+            "Community Area",
+            "Beat",
+            "Latitude",
+            "Longitude",
+            "X Coordinate",
+            "Y Coordinate",
+        ]
         SENTINEL_ZERO  = {"X Coordinate", "Y Coordinate"}
         MODE_FILL_COLS = {"District", "Ward", "Community Area"}
 
@@ -638,11 +663,14 @@ class DataProcessor:
             if col in df.columns:
                 df[col] = df[col].replace(0.0, np.nan)
 
-        for col, (lo, hi) in HARD_BOUNDS.items():
+        for col in SPATIAL_COLS:
             if col not in df.columns:
                 continue
+            bounds = hard_bounds.get(col)
             missing_rate = df[col].isna().mean()
-            df[col] = df[col].clip(lo, hi)
+            if bounds is not None:
+                lo, hi = bounds
+                df[col] = df[col].clip(lo, hi)
 
             if is_train:
                 fv = float(df[col].mode().iloc[0]) if col in MODE_FILL_COLS \
