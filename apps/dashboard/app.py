@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import os
 from pathlib import Path
 import pickle
@@ -12,6 +13,7 @@ import plotly.express as px
 import plotly.graph_objects as go
 import pydeck as pdk
 import streamlit as st
+import streamlit.components.v1 as components
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(PROJECT_ROOT))
@@ -25,10 +27,21 @@ PREDICTION_SOURCE_DIR = PROJECT_ROOT / "apps" / "dashboard" / "split_data_by_yea
 PREDICTION_DATA_PATH = Path(tempfile.gettempdir()) / "team22_district_hour_prediction_data.csv"
 MIN_PREDICTION_DATE = pd.Timestamp("2025-01-01")
 MAX_PREDICTION_DATE = pd.Timestamp("2025-12-31")
+NIBRS_DEMO_BASE_DIR = PROJECT_ROOT / "NIBRS data"
 NIBRS_METRICS_PATH = (
     PROJECT_ROOT / "artifacts" / "metrics" / "nibrs_generalization" / "nibrs_generalization_metrics_2024.csv"
 )
 NIBRS_BUILD_SUMMARY_PATH = PROJECT_ROOT / "data" / "raw" / "nibrs_generalization_build_summary.json"
+
+STATE_CENTROIDS = {
+    "CO": (39.55, -105.78),
+    "TX": (31.05, -97.56),
+}
+
+NIBRS_OFFENSE_MAP = {
+    "Larceny/Theft Offenses": "THEFT",
+    "Assault Offenses": "BATTERY",
+}
 
 st.set_page_config(
     page_title="Chicago Crime Intel",
@@ -183,6 +196,322 @@ def load_nibrs_generalization_results() -> tuple[pd.DataFrame | None, dict[str, 
         for row in summary_df.to_dict(orient="records"):
             build_summary[str(row["state"]).upper()] = row
     return df, build_summary
+
+
+def _dataset_display_name(path: Path) -> str:
+    rel = path.relative_to(NIBRS_DEMO_BASE_DIR)
+    return str(rel).replace("\\", "/")
+
+
+@st.cache_data(show_spinner=False)
+def discover_nibrs_demo_datasets() -> list[str]:
+    if not NIBRS_DEMO_BASE_DIR.exists():
+        return []
+
+    datasets: list[str] = []
+    for child in sorted(NIBRS_DEMO_BASE_DIR.iterdir()):
+        if not child.is_dir() or child.name.startswith("."):
+            continue
+        if (child / "NIBRS_incident.csv").exists():
+            datasets.append(_dataset_display_name(child))
+            continue
+        for nested in sorted(child.iterdir()):
+            if nested.is_dir() and (nested / "NIBRS_incident.csv").exists():
+                datasets.append(_dataset_display_name(nested))
+    return datasets
+
+
+def _resolve_nibrs_demo_dataset_path(dataset_name: str) -> Path:
+    return NIBRS_DEMO_BASE_DIR / Path(dataset_name)
+
+
+def _read_csv_safe(path: Path) -> pd.DataFrame:
+    for encoding in ("utf-8", "latin-1", "cp1252"):
+        try:
+            return pd.read_csv(path, low_memory=False, encoding=encoding)
+        except UnicodeDecodeError:
+            continue
+    raise UnicodeDecodeError(f"Unable to decode {path} using utf-8/latin-1/cp1252")
+
+
+@st.cache_data(show_spinner="Loading NIBRS agency dataset...")
+def load_nibrs_demo_bundle(dataset_name: str) -> dict:
+    dataset_dir = _resolve_nibrs_demo_dataset_path(dataset_name)
+    if not dataset_dir.exists():
+        raise FileNotFoundError(f"NIBRS dataset folder not found: {dataset_dir}")
+
+    file_map = {
+        "incident": "NIBRS_incident.csv",
+        "offense": "NIBRS_OFFENSE.csv",
+        "offense_type": "NIBRS_OFFENSE_TYPE.csv",
+        "agencies": "agencies.csv",
+    }
+
+    tables: dict[str, pd.DataFrame] = {}
+    for key, filename in file_map.items():
+        file_path = dataset_dir / filename
+        if not file_path.exists():
+            raise FileNotFoundError(f"Missing {filename} in {dataset_dir}")
+        tables[key] = _read_csv_safe(file_path)
+
+    offense = tables["offense"][["offense_id", "incident_id", "offense_code"]].copy()
+    incident = tables["incident"][["incident_id", "agency_id", "incident_date"]].copy()
+    offense_type = tables["offense_type"][["offense_code", "offense_category_name"]].copy()
+    agencies = tables["agencies"][["agency_id", "pub_agency_name", "state_name", "state_abbr"]].drop_duplicates(
+        subset=["agency_id"]
+    ).copy()
+
+    joined = offense.merge(incident, on="incident_id", how="inner")
+    joined = joined.merge(offense_type, on="offense_code", how="left")
+    joined = joined.merge(agencies, on="agency_id", how="left")
+    joined["Primary Type"] = joined["offense_category_name"].map(NIBRS_OFFENSE_MAP).fillna("OTHER")
+    joined["Date"] = pd.to_datetime(joined["incident_date"], format="mixed", errors="coerce")
+    joined.dropna(subset=["Date", "agency_id", "pub_agency_name"], inplace=True)
+    joined["agency_id"] = joined["agency_id"].astype(int)
+
+    agency_counts = joined.groupby("agency_id").size().reset_index(name="count").sort_values(
+        "count", ascending=False
+    )
+    top_agencies = agency_counts.head(77)["agency_id"].tolist()
+    joined = joined[joined["agency_id"].isin(top_agencies)].copy()
+
+    agency_to_region = {agency_id: idx + 1 for idx, agency_id in enumerate(top_agencies)}
+    joined["Community Area"] = joined["agency_id"].map(agency_to_region)
+
+    agency_meta = (
+        joined[["agency_id", "pub_agency_name", "state_name", "state_abbr"]]
+        .drop_duplicates(subset=["agency_id"])
+        .copy()
+    )
+    agency_meta["region_id"] = agency_meta["agency_id"].map(agency_to_region)
+    agency_meta.sort_values("region_id", inplace=True)
+    agency_meta.reset_index(drop=True, inplace=True)
+
+    state_abbr = (
+        str(agency_meta["state_abbr"].dropna().iloc[0]).upper()
+        if "state_abbr" in agency_meta.columns and not agency_meta["state_abbr"].dropna().empty
+        else dataset_name.split("/")[0].split("-")[0].upper()
+    )
+    center_lat, center_lon = STATE_CENTROIDS.get(state_abbr, (39.83, -98.58))
+    agency_meta["latitude"] = [
+        center_lat + ((hash(f"{name}|lat") % 1000 - 500) / 500) * 2.0
+        for name in agency_meta["pub_agency_name"].astype(str)
+    ]
+    agency_meta["longitude"] = [
+        center_lon + ((hash(f"{name}|lon") % 1000 - 500) / 500) * 3.0
+        for name in agency_meta["pub_agency_name"].astype(str)
+    ]
+
+    aligned = pd.DataFrame(
+        {
+            "ID": joined["offense_id"].values,
+            "Date": joined["Date"].values,
+            "Community Area": joined["Community Area"].values,
+            "Primary Type": joined["Primary Type"].values,
+        }
+    )
+
+    return {
+        "aligned": aligned,
+        "agency_meta": agency_meta,
+        "state_abbr": state_abbr,
+        "center": {"lat": center_lat, "lon": center_lon},
+    }
+
+
+def get_nibrs_available_dates(aligned_df: pd.DataFrame, window_size: int = 7) -> list[str]:
+    working = aligned_df.copy()
+    working["_date"] = pd.to_datetime(working["Date"]).dt.date
+    all_dates = sorted(working["_date"].unique())
+    if len(all_dates) <= window_size:
+        return []
+    return [str(day) for day in all_dates[window_size:]]
+
+
+def preview_predict_nibrs(bundle: dict, target_date: str) -> pd.DataFrame:
+    aligned = bundle["aligned"].copy()
+    aligned["Date"] = pd.to_datetime(aligned["Date"]).dt.date
+    agency_meta = bundle["agency_meta"].copy()
+    target = pd.Timestamp(target_date).date()
+    history_dates = [target - pd.Timedelta(days=offset) for offset in range(7, 0, -1)]
+
+    daily_counts = aligned.groupby(["Community Area", "Date"]).size().rename("count").reset_index()
+
+    rows: list[dict] = []
+    for _, row in agency_meta.iterrows():
+        region_id = int(row["region_id"])
+        history_values: list[float] = []
+        for history_date in history_dates:
+            match = daily_counts.loc[
+                (daily_counts["Community Area"] == region_id) & (daily_counts["Date"] == history_date),
+                "count",
+            ]
+            history_values.append(float(match.iloc[0]) if not match.empty else 0.0)
+
+        actual_match = daily_counts.loc[
+            (daily_counts["Community Area"] == region_id) & (daily_counts["Date"] == target),
+            "count",
+        ]
+        predicted = round(sum(history_values) / len(history_values), 2) if history_values else 0.0
+        actual = float(actual_match.iloc[0]) if not actual_match.empty else 0.0
+        rows.append(
+            {
+                "region_id": region_id,
+                "agency_name": str(row["pub_agency_name"]),
+                "state": str(row.get("state_name", "")),
+                "latitude": float(row["latitude"]),
+                "longitude": float(row["longitude"]),
+                "predicted": predicted,
+                "actual": actual,
+            }
+        )
+
+    return pd.DataFrame(rows).sort_values("predicted", ascending=False).reset_index(drop=True)
+
+
+def render_agency_leaflet_map(results: pd.DataFrame, center: dict[str, float]) -> None:
+    agencies = results[
+        ["agency_name", "predicted", "actual", "region_id", "latitude", "longitude"]
+    ].to_dict(orient="records")
+    payload = json.dumps(agencies)
+    center_json = json.dumps(center)
+
+    html = f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8" />
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+      <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+      <style>
+        html, body, #map {{
+          margin: 0;
+          padding: 0;
+          width: 100%;
+          height: 560px;
+          background: #faf9f7;
+        }}
+        .leaflet-container {{
+          font-family: "DM Sans", system-ui, sans-serif;
+        }}
+        .bar-marker {{
+          position: relative;
+          display: flex;
+          align-items: flex-end;
+          gap: 3px;
+        }}
+        .bar-col {{
+          width: 10px;
+          border-radius: 2px 2px 0 0;
+          min-height: 2px;
+          box-shadow: 0 1px 2px rgba(0,0,0,0.18);
+        }}
+        .bar-pred {{ background: #c07a50; }}
+        .bar-actual {{ background: #6b8eae; opacity: 0.82; }}
+        .leaflet-popup-content-wrapper {{
+          border-radius: 12px;
+          box-shadow: 0 6px 18px rgba(15, 23, 42, 0.12);
+        }}
+        .leaflet-popup-content {{
+          margin: 12px 14px;
+          font-size: 13px;
+          line-height: 1.55;
+        }}
+        .popup-name {{
+          font-weight: 700;
+          margin-bottom: 6px;
+          color: #1f2937;
+        }}
+        .popup-row {{
+          display: flex;
+          justify-content: space-between;
+          gap: 18px;
+        }}
+        .popup-label {{ color: #6b7280; }}
+        .popup-pred {{ color: #c07a50; font-weight: 700; }}
+        .popup-actual {{ color: #6b8eae; font-weight: 700; }}
+        .map-legend {{
+          position: absolute;
+          right: 18px;
+          bottom: 18px;
+          z-index: 999;
+          background: rgba(255,255,255,0.94);
+          border: 1px solid #e5e7eb;
+          border-radius: 14px;
+          padding: 12px 14px;
+          box-shadow: 0 8px 18px rgba(15, 23, 42, 0.10);
+          font-size: 12px;
+          color: #334155;
+        }}
+        .legend-item {{
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          margin-bottom: 4px;
+        }}
+        .legend-item:last-child {{ margin-bottom: 0; }}
+        .legend-swatch {{
+          width: 10px;
+          height: 10px;
+          border-radius: 2px;
+        }}
+      </style>
+    </head>
+    <body>
+      <div id="map"></div>
+      <div class="map-legend">
+        <div class="legend-item"><span class="legend-swatch" style="background:#c07a50"></span><span>Predicted crime count</span></div>
+        <div class="legend-item"><span class="legend-swatch" style="background:#6b8eae"></span><span>Actual crime count</span></div>
+      </div>
+      <script>
+        const agencies = {payload};
+        const center = {center_json};
+
+        const map = L.map('map', {{
+          zoomControl: true,
+          attributionControl: true
+        }}).setView([center.lat, center.lon], 5.5);
+
+        L.tileLayer('https://{{s}}.basemaps.cartocdn.com/light_all/{{z}}/{{x}}/{{y}}{{r}}.png', {{
+          maxZoom: 18
+        }}).addTo(map);
+
+        const maxVal = Math.max(1, ...agencies.map(a => Math.max(a.predicted || 0, a.actual || 0)));
+        const markerLayer = L.layerGroup().addTo(map);
+
+        agencies.forEach((agency) => {{
+          const predH = Math.max(2, (agency.predicted / maxVal) * 48);
+          const actH = Math.max(2, (agency.actual / maxVal) * 48);
+          const html = `
+            <div class="bar-marker" style="height:48px; width:24px;">
+              <div class="bar-col bar-pred" style="height:${{predH}}px;"></div>
+              <div class="bar-col bar-actual" style="height:${{actH}}px;"></div>
+            </div>`;
+
+          const icon = L.divIcon({{
+            html,
+            className: '',
+            iconSize: [24, 48],
+            iconAnchor: [12, 48]
+          }});
+
+          const marker = L.marker([agency.latitude, agency.longitude], {{ icon }});
+          const popup = `
+            <div class="popup-name">${{agency.agency_name}}</div>
+            <div class="popup-row"><span class="popup-label">Predicted</span><span class="popup-pred">${{agency.predicted.toFixed(2)}}</span></div>
+            <div class="popup-row"><span class="popup-label">Actual</span><span class="popup-actual">${{agency.actual.toFixed(2)}}</span></div>
+            <div class="popup-row"><span class="popup-label">Region</span><span>#${{agency.region_id}}</span></div>
+          `;
+          marker.bindPopup(popup, {{ maxWidth: 220 }});
+          markerLayer.addLayer(marker);
+        }});
+      </script>
+    </body>
+    </html>
+    """
+
+    components.html(html, height=560)
 
 
 def build_prediction_dataset() -> None:
@@ -409,7 +738,9 @@ def render_welcome() -> None:
         if row_three_left.button("🌎 NIBRS Generalization", use_container_width=True):
             st.session_state.app_mode = "NIBRS Generalization"
             st.rerun()
-        row_three_right.empty()
+        if row_three_right.button("🗺️ Agency Map Demo", use_container_width=True):
+            st.session_state.app_mode = "Agency Map Demo"
+            st.rerun()
 
         st.markdown("<br>", unsafe_allow_html=True)
         st.markdown(
@@ -421,6 +752,7 @@ def render_welcome() -> None:
                     <li>Model-backed risk prediction workflow</li>
                     <li>District-level hotspot ranking for a chosen hour</li>
                     <li>Aggregate daily risk-pattern analysis across districts</li>
+                    <li>NIBRS agency-map demo inspired by the JIaDLu MVP</li>
                     <li>Basic user input validation and interpretable output</li>
                 </ul>
             </div>
@@ -460,6 +792,9 @@ def render_dashboard() -> None:
             st.rerun()
         if st.button("🌎 NIBRS Generalization", use_container_width=True):
             st.session_state.app_mode = "NIBRS Generalization"
+            st.rerun()
+        if st.button("🗺️ Agency Map Demo", use_container_width=True):
+            st.session_state.app_mode = "Agency Map Demo"
             st.rerun()
         st.divider()
         st.title(f"Controls ({year})")
@@ -606,6 +941,9 @@ def render_prediction_demo() -> None:
             st.rerun()
         if st.button("🌎 NIBRS Generalization", use_container_width=True):
             st.session_state.app_mode = "NIBRS Generalization"
+            st.rerun()
+        if st.button("🗺️ Agency Map Demo", use_container_width=True):
+            st.session_state.app_mode = "Agency Map Demo"
             st.rerun()
         st.divider()
         st.info(
@@ -806,6 +1144,9 @@ def render_high_risk_places() -> None:
         if st.button("🌎 NIBRS Generalization", use_container_width=True):
             st.session_state.app_mode = "NIBRS Generalization"
             st.rerun()
+        if st.button("🗺️ Agency Map Demo", use_container_width=True):
+            st.session_state.app_mode = "Agency Map Demo"
+            st.rerun()
         st.divider()
         top_k = st.slider("Top districts to highlight", min_value=3, max_value=10, value=5)
 
@@ -958,6 +1299,9 @@ def render_group_pattern_analysis() -> None:
             st.rerun()
         if st.button("🌎 NIBRS Generalization", use_container_width=True):
             st.session_state.app_mode = "NIBRS Generalization"
+            st.rerun()
+        if st.button("🗺️ Agency Map Demo", use_container_width=True):
+            st.session_state.app_mode = "Agency Map Demo"
             st.rerun()
         st.divider()
         top_block_count = st.slider("Highlighted district-hour blocks", min_value=5, max_value=15, value=8)
@@ -1286,6 +1630,125 @@ def render_nibrs_generalization() -> None:
         )
 
 
+def render_agency_map_demo() -> None:
+    st.title("Agency Map Demo")
+    st.caption(
+        "A Streamlit-integrated version of the JIaDLu NIBRS agency-level demo, merged into the main Team22 app."
+    )
+
+    with st.sidebar:
+        st.title("Navigation")
+        if st.button("← Home", use_container_width=True):
+            st.session_state.app_mode = "Welcome"
+            st.rerun()
+        if st.button("📊 Dashboard", use_container_width=True):
+            st.session_state.app_mode = "Dashboard"
+            st.rerun()
+        if st.button("🤖 Prediction Demo", use_container_width=True):
+            st.session_state.app_mode = "Prediction Demo"
+            st.rerun()
+        if st.button("📍 High-Risk Places", use_container_width=True):
+            st.session_state.app_mode = "High-Risk Places"
+            st.rerun()
+        if st.button("👥 Group Pattern Analysis", use_container_width=True):
+            st.session_state.app_mode = "Group Pattern Analysis"
+            st.rerun()
+        if st.button("🌎 NIBRS Generalization", use_container_width=True):
+            st.session_state.app_mode = "NIBRS Generalization"
+            st.rerun()
+        st.divider()
+        st.info(
+            "Current local mode uses a 7-day average preview because the original JIaDLu GRU "
+            "checkpoint assets are not present in this repository."
+        )
+
+    datasets = discover_nibrs_demo_datasets()
+    if not datasets:
+        st.error(
+            f"No NIBRS datasets were found under `{NIBRS_DEMO_BASE_DIR}`. "
+            "Keep the local NIBRS data folder beside the repository to use this page."
+        )
+        return
+
+    selected_dataset = st.selectbox("NIBRS dataset", datasets, index=min(1, len(datasets) - 1))
+    try:
+        bundle = load_nibrs_demo_bundle(selected_dataset)
+    except Exception as exc:
+        st.error(f"Unable to load dataset `{selected_dataset}`: {exc}")
+        return
+
+    available_dates = get_nibrs_available_dates(bundle["aligned"])
+    if not available_dates:
+        st.error("This dataset does not have enough history for a 7-day preview window.")
+        return
+
+    default_index = max(0, len(available_dates) - 90)
+    selected_date = st.selectbox("Target date", available_dates, index=default_index)
+    run_prediction = st.button("Run Agency Prediction", type="primary", use_container_width=True)
+
+    if not run_prediction:
+        st.info("Choose a dataset and date, then run the integrated agency prediction map.")
+        return
+
+    with st.spinner("Scoring agencies for the selected day..."):
+        results = preview_predict_nibrs(bundle, selected_date)
+
+    if results.empty:
+        st.warning("No agencies were available for the selected dataset/date.")
+        return
+
+    top_row = results.iloc[0]
+    c1, c2, c3, c4 = st.columns(4)
+    with c1:
+        metric_card("Agencies", f"{len(results):,}", selected_dataset, "#c07a50")
+    with c2:
+        metric_card("Total Predicted", f"{results['predicted'].sum():.0f}", "Preview sum", "#c07a50")
+    with c3:
+        metric_card("Max Agency", f"{top_row['predicted']:.1f}", str(top_row["agency_name"])[:18], "#c07a50")
+    with c4:
+        metric_card("Target Date", selected_date, "7-day preview", "#c07a50")
+
+    st.warning(
+        "Preview mode: this integrated page preserves the JIaDLu agency-map interaction, but uses a 7-day "
+        "average fallback because the original Baseline-GRU assets are unavailable locally."
+    )
+
+    map_col, table_col = st.columns([1.5, 1])
+    with map_col:
+        st.subheader("Agency prediction map")
+        render_agency_leaflet_map(results, bundle["center"])
+
+    with table_col:
+        st.subheader("Top agencies")
+        st.dataframe(
+            results.head(15)[["agency_name", "predicted", "actual", "region_id"]].rename(
+                columns={
+                    "agency_name": "Agency",
+                    "predicted": "Predicted",
+                    "actual": "Actual",
+                    "region_id": "Region",
+                }
+            ),
+            use_container_width=True,
+            hide_index=True,
+        )
+
+    st.subheader("Full result table")
+    st.dataframe(
+        results.rename(
+            columns={
+                "agency_name": "Agency",
+                "state": "State",
+                "predicted": "Predicted",
+                "actual": "Actual",
+                "region_id": "Region",
+            }
+        ),
+        use_container_width=True,
+        hide_index=True,
+    )
+
+
 if st.session_state.app_mode == "Welcome":
     render_welcome()
 elif st.session_state.app_mode == "Dashboard":
@@ -1298,3 +1761,5 @@ elif st.session_state.app_mode == "Group Pattern Analysis":
     render_group_pattern_analysis()
 elif st.session_state.app_mode == "NIBRS Generalization":
     render_nibrs_generalization()
+elif st.session_state.app_mode == "Agency Map Demo":
+    render_agency_map_demo()

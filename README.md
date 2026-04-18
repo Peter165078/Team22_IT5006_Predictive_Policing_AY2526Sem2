@@ -53,6 +53,17 @@ setup:
 
 The code no longer defaults to the earlier reduced local-subset benchmark.
 
+## Integrated Demo Structure
+
+This repository is now the main integrated project deliverable. In particular:
+- the Team22 Chicago dashboard, hotspot views, prediction demo, and NIBRS generalization pages remain in the main Streamlit app
+- the agency-level NIBRS demo experience inspired by the separate `JIaDLu` project has been integrated into `apps/dashboard/app.py` as `Agency Map Demo`
+- Lu Jiadong's STGNN research code has also been preserved under `src/experimental/jiadong_stgnn/` so his modeling contribution is visible in the main repository
+- the original `JIaDLu` repository was **not** copied wholesale into this repository as a second app or nested project
+- the local `NIBRS data/` folder beside the repository is treated as a local demo dataset store, not as a version-controlled project asset
+
+See `docs/demo_integration.md` for a concise map of what was integrated and what remains local-only. See `docs/jiadong_stgnn_summary.md` for the research-module summary and file map.
+
 ---
 
 # Reproduce Our Results
@@ -203,6 +214,10 @@ http://localhost:8501
 ```
 
 The dashboard expects yearly ZIP files to exist in `apps/dashboard/split_data_by_year/`.
+
+The same Streamlit app now also includes an integrated `Agency Map Demo` page. That page reuses the Team22 navigation shell but brings in the JIaDLu-style agency-level NIBRS interaction. To use it locally, keep the large `NIBRS data/` directory beside the repository root. Those files are local-only demo assets and should not be committed.
+
+If you want to inspect Lu Jiadong's spatiotemporal research contribution directly, see `src/experimental/jiadong_stgnn/` and run `python src/scripts/run_jiadong_stgnn.py --temporal lstm` after installing the optional dependencies in `requirements-stgnn.txt`.
 
 ---
 
