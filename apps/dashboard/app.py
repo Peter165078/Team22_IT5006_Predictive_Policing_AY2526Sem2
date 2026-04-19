@@ -7,6 +7,7 @@ from pathlib import Path
 import pickle
 import sys
 import tempfile
+import traceback
 import zipfile
 
 import pandas as pd
@@ -1869,17 +1870,29 @@ def render_agency_map_demo() -> None:
     )
 
 
-if st.session_state.app_mode == "Welcome":
-    render_welcome()
-elif st.session_state.app_mode == "Dashboard":
-    render_dashboard()
-elif st.session_state.app_mode == "Prediction Demo":
-    render_prediction_demo()
-elif st.session_state.app_mode == "High-Risk Places":
-    render_high_risk_places()
-elif st.session_state.app_mode == "Group Pattern Analysis":
-    render_group_pattern_analysis()
-elif st.session_state.app_mode == "NIBRS Generalization":
-    render_nibrs_generalization()
-elif st.session_state.app_mode == "Agency Map Demo":
-    render_agency_map_demo()
+def run_app() -> None:
+    if st.session_state.app_mode == "Welcome":
+        render_welcome()
+    elif st.session_state.app_mode == "Dashboard":
+        render_dashboard()
+    elif st.session_state.app_mode == "Prediction Demo":
+        render_prediction_demo()
+    elif st.session_state.app_mode == "High-Risk Places":
+        render_high_risk_places()
+    elif st.session_state.app_mode == "Group Pattern Analysis":
+        render_group_pattern_analysis()
+    elif st.session_state.app_mode == "NIBRS Generalization":
+        render_nibrs_generalization()
+    elif st.session_state.app_mode == "Agency Map Demo":
+        render_agency_map_demo()
+    else:
+        st.session_state.app_mode = "Welcome"
+        render_welcome()
+
+
+try:
+    run_app()
+except Exception as exc:
+    traceback.print_exc()
+    st.error("The app hit an unexpected error while rendering this page.")
+    st.exception(exc)
