@@ -217,7 +217,7 @@ The dashboard expects yearly ZIP files to exist in `apps/dashboard/split_data_by
 
 The same Streamlit app now also includes an integrated `Agency Map Demo` page. That page reuses the Team22 navigation shell but brings in the JIaDLu-style agency-level NIBRS interaction. To use it locally, keep the large `NIBRS data/` directory beside the repository root. Those files are local-only demo assets and should not be committed.
 
-For cloud deployment, the repository also includes a small bundled sample zip at `apps/dashboard/demo_assets/` so the agency-level page can still run without the full local NIBRS folder.
+For cloud deployment, the repository also includes bundled agency-demo zips at `apps/dashboard/demo_assets/` for `CO-2023`, `CO-2024`, `TX`, and `TX-2024`, so the agency-level page can still run without the full local NIBRS folder.
 
 If you want to inspect Lu Jiadong's spatiotemporal research contribution directly, see `src/experimental/jiadong_stgnn/` and run `python src/scripts/run_jiadong_stgnn.py --temporal lstm` after installing the optional dependencies in `requirements-stgnn.txt`.
 
