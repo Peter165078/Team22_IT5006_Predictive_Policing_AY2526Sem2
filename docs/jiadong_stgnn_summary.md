@@ -57,7 +57,7 @@ Each output row predicts next-step crime intensity for all 77 regions.
 
 This integration is meant to preserve and expose Jiadong's method contribution inside the main GitHub repository.
 
-It does **not** mean the main Streamlit demo currently runs full STGNN inference online. The current integrated dashboard still uses the existing Team22 demo flow plus the local preview agency map page.
+It does **not** mean the main Streamlit demo currently runs full STGNN inference online. The current integrated dashboard still uses the existing Team22 demo flow plus the bundled preview version of the agency map page.
 
 ## Local reproduction
 
@@ -87,4 +87,3 @@ This keeps the repository clean while still making the contribution inspectable:
 - the main Team22 app remains the single primary demo entry point
 - the agency-map demo contribution stays visible in `apps/dashboard/app.py`
 - the underlying STGNN research contribution is now preserved in code, not just described in prose
-

@@ -187,7 +187,7 @@ hours instead of being synthesized from copied event rows.
 
 Open and run in order:  
 1. `notebooks/01_eda_overview.ipynb`  
-2. `notebooks/02_build_standard_data.ipynb`  
+2. `notebooks/02_build_standard_data_for_eda.ipynb`  
 3. `notebooks/03_eda_pipeline.ipynb`  
 4. `notebooks/04_results_overview.ipynb`  
 

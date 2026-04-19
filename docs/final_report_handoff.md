@@ -22,29 +22,29 @@ This project studies predictive policing as a decision-support problem using Chi
 
 ### Project overview and demo
 
-- [README.md](/Users/jiahao/Documents/Team22_IT5006_Predictive_Policing_AY2526Sem2-main/Team22_IT5006_Predictive_Policing_AY2526Sem2/README.md)
-- [app.py](/Users/jiahao/Documents/Team22_IT5006_Predictive_Policing_AY2526Sem2-main/Team22_IT5006_Predictive_Policing_AY2526Sem2/apps/dashboard/app.py)
+- [README.md](../README.md)
+- [app.py](../apps/dashboard/app.py)
 
 ### Phase 2 write-up drafts
 
-- [phase2_part1_part2_draft.md](/Users/jiahao/Documents/Team22_IT5006_Predictive_Policing_AY2526Sem2-main/Team22_IT5006_Predictive_Policing_AY2526Sem2/docs/phase2_part1_part2_draft.md)
-- [phase2_part3_part4_draft.md](/Users/jiahao/Documents/Team22_IT5006_Predictive_Policing_AY2526Sem2-main/Team22_IT5006_Predictive_Policing_AY2526Sem2/docs/phase2_part3_part4_draft.md)
-- [phase2_part4_feature_importance_addendum.md](/Users/jiahao/Documents/Team22_IT5006_Predictive_Policing_AY2526Sem2-main/Team22_IT5006_Predictive_Policing_AY2526Sem2/docs/phase2_part4_feature_importance_addendum.md)
-- [phase2_feedback_revision_notes.md](/Users/jiahao/Documents/Team22_IT5006_Predictive_Policing_AY2526Sem2-main/Team22_IT5006_Predictive_Policing_AY2526Sem2/docs/phase2_feedback_revision_notes.md)
+- [phase2_part1_part2_draft.md](./phase2_part1_part2_draft.md)
+- [phase2_part3_part4_draft.md](./phase2_part3_part4_draft.md)
+- [phase2_part4_feature_importance_addendum.md](./phase2_part4_feature_importance_addendum.md)
+- [phase2_feedback_revision_notes.md](./phase2_feedback_revision_notes.md)
 
 ### Quantitative outputs
 
-- [phase2_model_metrics.csv](/Users/jiahao/Documents/Team22_IT5006_Predictive_Policing_AY2526Sem2-main/Team22_IT5006_Predictive_Policing_AY2526Sem2/artifacts/metrics/phase2_model_metrics.csv)
-- [phase2_spatiotemporal_metrics.csv](/Users/jiahao/Documents/Team22_IT5006_Predictive_Policing_AY2526Sem2-main/Team22_IT5006_Predictive_Policing_AY2526Sem2/artifacts/metrics/phase2_spatiotemporal_metrics.csv)
-- [feature_importance_summary.json](/Users/jiahao/Documents/Team22_IT5006_Predictive_Policing_AY2526Sem2-main/Team22_IT5006_Predictive_Policing_AY2526Sem2/artifacts/metrics/feature_importance/feature_importance_summary.json)
+- [phase2_model_metrics.csv](../artifacts/metrics/phase2_model_metrics.csv)
+- [phase2_spatiotemporal_metrics.csv](../artifacts/metrics/phase2_spatiotemporal_metrics.csv)
+- [feature_importance_summary.json](../artifacts/metrics/feature_importance/feature_importance_summary.json)
 
 ### Figures
 
-- [overview_grid.png](/Users/jiahao/Documents/Team22_IT5006_Predictive_Policing_AY2526Sem2-main/Team22_IT5006_Predictive_Policing_AY2526Sem2/artifacts/overview_grid.png)
-- [crime_trend_hourly.png](/Users/jiahao/Documents/Team22_IT5006_Predictive_Policing_AY2526Sem2-main/Team22_IT5006_Predictive_Policing_AY2526Sem2/artifacts/figures/crime_trend_hourly.png)
-- [crime_trend_weekday.png](/Users/jiahao/Documents/Team22_IT5006_Predictive_Policing_AY2526Sem2-main/Team22_IT5006_Predictive_Policing_AY2526Sem2/artifacts/figures/crime_trend_weekday.png)
-- [crime_spatial_distribution.png](/Users/jiahao/Documents/Team22_IT5006_Predictive_Policing_AY2526Sem2-main/Team22_IT5006_Predictive_Policing_AY2526Sem2/artifacts/figures/crime_spatial_distribution.png)
-- [hist_gradient_boosting_feature_importance_top15.png](/Users/jiahao/Documents/Team22_IT5006_Predictive_Policing_AY2526Sem2-main/Team22_IT5006_Predictive_Policing_AY2526Sem2/artifacts/metrics/feature_importance/hist_gradient_boosting_feature_importance_top15.png)
+- [overview_grid.png](../artifacts/overview_grid.png)
+- [crime_trend_hourly.png](../artifacts/figures/crime_trend_hourly.png)
+- [crime_trend_weekday.png](../artifacts/figures/crime_trend_weekday.png)
+- [crime_spatial_distribution.png](../artifacts/figures/crime_spatial_distribution.png)
+- [hist_gradient_boosting_feature_importance_top15.png](../artifacts/metrics/feature_importance/hist_gradient_boosting_feature_importance_top15.png)
 
 ## 4. Numbers that should stay consistent
 

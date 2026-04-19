@@ -1694,7 +1694,7 @@ def render_nibrs_generalization() -> None:
         st.markdown(
             f"""
             <div class="sub-card">
-                <strong>Recommended presentation wording</strong>
+                <strong>Suggested summary</strong>
                 <p style="margin-top: 10px; color: #475569;">
                     We trained the model on Chicago historical data, then tested external
                     generalization on {state_names} NIBRS county-hour datasets for 2024.
@@ -1735,8 +1735,8 @@ def render_agency_map_demo() -> None:
             st.rerun()
         st.divider()
         st.info(
-            "Current local mode uses a 7-day average preview because the original JIaDLu GRU "
-            "checkpoint assets are not present in this repository."
+            "This agency demo currently uses a 7-day preview fallback because the original "
+            "JIaDLu GRU checkpoint assets are not included in this repository."
         )
 
     datasets = discover_nibrs_demo_datasets()

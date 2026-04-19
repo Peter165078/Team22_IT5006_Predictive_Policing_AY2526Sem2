@@ -22,7 +22,7 @@ In other words, the useful demo behavior was merged into the Team22 dashboard, r
 
 The main repository now also preserves the most important method-level contribution from that work: the STGNN training and evaluation module described in Jiadong's report.
 
-## Local-only assets
+## Local and bundled demo assets
 
 The integrated agency demo expects a local top-level folder named:
 
@@ -30,14 +30,20 @@ The integrated agency demo expects a local top-level folder named:
 
 That directory is treated as a local dataset store for preview/demo use. It is intentionally ignored in Git because the files are large and environment-specific.
 
+For cloud deployment and lightweight preview, the repository also includes bundled demo archives under:
+
+- `apps/dashboard/demo_assets/`
+
+Those bundled ZIPs cover `CO-2023`, `CO-2024`, `TX`, and `TX-2024`, so the agency page can still run even when the full local NIBRS folder is absent.
+
 ## Current preview limitation
 
-The integrated `Agency Map Demo` currently uses a 7-day average preview fallback when the original Baseline-GRU checkpoint assets are not available locally. The page still preserves the agency-level interaction pattern and bar-marker map style for local demonstrations.
+The integrated `Agency Map Demo` currently uses a 7-day average preview fallback when the original Baseline-GRU checkpoint assets are not available. The page still preserves the agency-level interaction pattern and bar-marker map style for demonstrations, whether the data comes from a local folder, a bundled archive, or an uploaded ZIP.
 
 ## Recommended repository mental model
 
 If you need to explain the project quickly, the cleanest description is:
 
-- `team22_phase3_clean` is the main integrated submission repository
+- `project-final` is the final integrated submission branch
 - the Team22 Streamlit app is the single primary entry point
 - the JIaDLu demo ideas have been folded into that app instead of being kept as a separate product inside the repo
