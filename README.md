@@ -64,6 +64,22 @@ This repository is now the main integrated project deliverable. In particular:
 
 See `docs/demo_integration.md` for a concise map of what was integrated and what remains local-only. See `docs/jiadong_stgnn_summary.md` for the research-module summary and file map.
 
+## Phase 3 Deliverables
+
+Phase 3 is the main final-submission focus of this repository. The deliverables now include:
+
+- a unified Streamlit demo in `apps/dashboard/app.py`
+- integrated online deployment support for the Team22 dashboard and prediction pages
+- an `Agency Map Demo` page adapted from the JIaDLu NIBRS agency-level interface
+- bundled cloud-safe NIBRS demo archives under `apps/dashboard/demo_assets/`
+- preserved STGNN research code from Lu Jiadong under `src/experimental/jiadong_stgnn/`
+
+In short, Phase 3 is not just a deployment wrapper here. It is the final integrated system that combines:
+
+- Team22's Chicago dashboard and modeling workflow
+- external NIBRS generalization and agency-level demo interaction
+- Lu Jiadong's spatiotemporal STGNN modeling contribution
+
 ---
 
 # Reproduce Our Results
@@ -219,7 +235,24 @@ The same Streamlit app now also includes an integrated `Agency Map Demo` page. T
 
 For cloud deployment, the repository also includes bundled agency-demo zips at `apps/dashboard/demo_assets/` for `CO-2023`, `CO-2024`, `TX`, and `TX-2024`, so the agency-level page can still run without the full local NIBRS folder.
 
-If you want to inspect Lu Jiadong's spatiotemporal research contribution directly, see `src/experimental/jiadong_stgnn/` and run `python src/scripts/run_jiadong_stgnn.py --temporal lstm` after installing the optional dependencies in `requirements-stgnn.txt`.
+## Lu Jiadong Contribution
+
+Lu Jiadong's contribution is represented in two visible parts of the final repository:
+
+- the integrated agency-level NIBRS demo flow in `apps/dashboard/app.py`
+- the preserved STGNN research module in `src/experimental/jiadong_stgnn/`
+
+If you want to inspect the STGNN contribution directly, run:
+
+```bash
+python src/scripts/run_jiadong_stgnn.py --temporal lstm
+```
+
+after installing the optional dependencies in `requirements-stgnn.txt`.
+
+For a concise explanation of the method, file map, and scope, see:
+
+- `docs/jiadong_stgnn_summary.md`
 
 ---
 
@@ -269,14 +302,14 @@ docs/phase2_methodology.md
 
 ---
 
-# Repository Structure (Still Designing & Developing)
+# Repository Structure
 
 ### `apps/`
 User-facing applications (demo/UI layer).  
 - `apps/dashboard/`  
-  Interactive dashboard used in Phase 1 (EDA presentation) and later reused for Phase 3 demo (visualizing inputs/outputs, maps, filters, etc.).  
+  Main Streamlit application used for the final integrated demo in Phase 3. It contains the Chicago dashboard, prediction demo, hotspot and group-analysis pages, NIBRS generalization view, and Agency Map Demo.  
 - `apps/web_frontend/`  
-  Optional separate web frontend (e.g., React/Vue). Use this if you plan to build a standalone UI that calls the API from `deployment/`.  
+  Optional separate web frontend for future extension; it is not the primary submission entry point.  
 
 > Recommendation: If you use Streamlit for the dashboard, keep it under `apps/dashboard/`.
 
@@ -295,33 +328,26 @@ Datasets and intermediate data files.
 - `data/processed/` — Cleaned/feature-engineered datasets used for training  
 
 ### `deployment/`
-Deployment layer for serving predictions (Phase 3).  
-This directory contains:  
-- A Flask (or FastAPI) API server  
-- Configuration for serving the trained model from `artifacts/models/`  
-- Optional Docker files and deployment scripts  
+Deployment-related assets for serving predictions or extending the system beyond the Streamlit app. The main submission demo currently runs from `apps/dashboard/app.py`.
 
 ### `docs/`
-Project documentation source intended for Read the Docs (or similar).  
-Use this for detailed technical documentation beyond the `README.md`, such as:  
-- Data dictionary  
-- Modeling approach  
-- API contract  
-- Reproducibility guide  
+Project documentation and report-support materials.  
+This directory includes integration notes, modeling summaries, handoff documents, and write-up support files used across the three phases.
 
 ### `notebooks/`
 Jupyter notebooks used primarily for exploration, experimentation, and reporting.  
 Current notebooks:  
 - `01_eda_overview.ipynb` — Overall dataset understanding and cleaning notes  
-- `02_eda_time_patterns.ipynb` — Temporal pattern analysis  
-- `03_eda_spatial_patterns.ipynb` — Spatial analysis (hotspots, maps)  
+- `02_build_standard_data_for_eda.ipynb` — Build the standard analysis table used by downstream EDA  
+- `03_eda_pipeline.ipynb` — EDA pipeline for temporal and spatial pattern analysis  
+- `04_results_overview.ipynb` — Results summary and report-ready visual outputs  
 
 **Rule of thumb:** Notebooks are for exploration and visualization; reusable logic should live in `src/`.
 
 ### `reports/`
 PDF deliverables for each phase submission.  
 - `reports/Phase1_Report.pdf` — Phase 1 report (literature + EDA + dashboard summary)  
-- (Later) `reports/Phase2_Report.pdf`, `reports/Phase3_Report.pdf`  
+- `reports/Phase2_Report.pdf` and `reports/Phase3_Report.pdf` may be added as final deliverables depending on the submission format  
 
 ### `scripts/`
 Command-line convenience scripts to standardize common workflows.  
@@ -346,6 +372,8 @@ Core reusable Python package code (shared by notebooks, scripts, dashboard, and 
   - `metrics.py` — Metrics and evaluation routines  
 - `src/utils/`  
   Common helper utilities (logging, IO helpers, shared constants, etc.).  
+- `src/experimental/jiadong_stgnn/`  
+  Lu Jiadong's preserved research contribution. This module contains the STGNN implementation, temporal encoders, data pipeline, adjacency construction, training, and evaluation logic for the spatiotemporal forecasting variant described in his report.  
 - `src/__init__.py`  
   Package initialization.  
 
