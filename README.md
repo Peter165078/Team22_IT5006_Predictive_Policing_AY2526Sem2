@@ -58,7 +58,7 @@ The code no longer defaults to the earlier reduced local-subset benchmark.
 This repository is now the main integrated project deliverable. In particular:
 - the Team22 Chicago dashboard, hotspot views, prediction demo, and NIBRS generalization pages remain in the main Streamlit app
 - the agency-level NIBRS demo experience inspired by the separate `JIaDLu` project has been integrated into `apps/dashboard/app.py` as `Agency Map Demo`
-- Lu Jiadong's STGNN research code has also been preserved under `src/experimental/jiadong_stgnn/` so his modeling contribution is visible in the main repository
+- an STGNN-based spatiotemporal research module has also been preserved under `src/experimental/jiadong_stgnn/` so the repository reflects both the deployed demo and the extended modeling work
 - the original `JIaDLu` repository was **not** copied wholesale into this repository as a second app or nested project
 - the local `NIBRS data/` folder beside the repository is treated as a local demo dataset store, not as a version-controlled project asset
 
@@ -72,13 +72,13 @@ Phase 3 is the main final-submission focus of this repository. The deliverables 
 - integrated online deployment support for the Team22 dashboard and prediction pages
 - an `Agency Map Demo` page adapted from the JIaDLu NIBRS agency-level interface
 - bundled cloud-safe NIBRS demo archives under `apps/dashboard/demo_assets/`
-- preserved STGNN research code from Lu Jiadong under `src/experimental/jiadong_stgnn/`
+- a preserved STGNN research module under `src/experimental/jiadong_stgnn/`
 
 In short, Phase 3 is not just a deployment wrapper here. It is the final integrated system that combines:
 
 - Team22's Chicago dashboard and modeling workflow
 - external NIBRS generalization and agency-level demo interaction
-- Lu Jiadong's spatiotemporal STGNN modeling contribution
+- an additional spatiotemporal STGNN modeling track preserved for inspection and reproduction
 
 ---
 
@@ -235,14 +235,8 @@ The same Streamlit app now also includes an integrated `Agency Map Demo` page. T
 
 For cloud deployment, the repository also includes bundled agency-demo zips at `apps/dashboard/demo_assets/` for `CO-2023`, `CO-2024`, `TX`, and `TX-2024`, so the agency-level page can still run without the full local NIBRS folder.
 
-## Lu Jiadong Contribution
-
-Lu Jiadong's contribution is represented in two visible parts of the final repository:
-
-- the integrated agency-level NIBRS demo flow in `apps/dashboard/app.py`
-- the preserved STGNN research module in `src/experimental/jiadong_stgnn/`
-
-If you want to inspect the STGNN contribution directly, run:
+The repository also preserves an additional spatiotemporal research track under `src/experimental/jiadong_stgnn/`.
+If you want to inspect that module directly, run:
 
 ```bash
 python src/scripts/run_jiadong_stgnn.py --temporal lstm
@@ -250,9 +244,7 @@ python src/scripts/run_jiadong_stgnn.py --temporal lstm
 
 after installing the optional dependencies in `requirements-stgnn.txt`.
 
-For a concise explanation of the method, file map, and scope, see:
-
-- `docs/jiadong_stgnn_summary.md`
+For a concise explanation of the method, file map, and scope, see `docs/jiadong_stgnn_summary.md`.
 
 ---
 
@@ -373,7 +365,7 @@ Core reusable Python package code (shared by notebooks, scripts, dashboard, and 
 - `src/utils/`  
   Common helper utilities (logging, IO helpers, shared constants, etc.).  
 - `src/experimental/jiadong_stgnn/`  
-  Lu Jiadong's preserved research contribution. This module contains the STGNN implementation, temporal encoders, data pipeline, adjacency construction, training, and evaluation logic for the spatiotemporal forecasting variant described in his report.  
+  Preserved spatiotemporal research module containing the STGNN implementation, temporal encoders, data pipeline, adjacency construction, training, and evaluation logic for the forecasting variant integrated into this repository.  
 - `src/__init__.py`  
   Package initialization.  
 
