@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import io
 import json
 import os
 from pathlib import Path
@@ -25,6 +26,7 @@ PREDICTION_DATA_PATH = Path(tempfile.gettempdir()) / "team22_district_hour_predi
 MIN_PREDICTION_DATE = pd.Timestamp("2025-01-01")
 MAX_PREDICTION_DATE = pd.Timestamp("2025-12-31")
 NIBRS_DEMO_BASE_DIR = PROJECT_ROOT / "NIBRS data"
+NIBRS_BUNDLED_ZIP_DIR = PROJECT_ROOT / "apps" / "dashboard" / "demo_assets"
 NIBRS_METRICS_PATH = (
     PROJECT_ROOT / "artifacts" / "metrics" / "nibrs_generalization" / "nibrs_generalization_metrics_2024.csv"
 )
@@ -222,6 +224,17 @@ def _resolve_nibrs_demo_dataset_path(dataset_name: str) -> Path:
     return NIBRS_DEMO_BASE_DIR / Path(dataset_name)
 
 
+@st.cache_data(show_spinner=False)
+def discover_bundled_nibrs_demo_archives() -> list[str]:
+    if not NIBRS_BUNDLED_ZIP_DIR.exists():
+        return []
+    return sorted(
+        path.name
+        for path in NIBRS_BUNDLED_ZIP_DIR.glob("*.zip")
+        if path.is_file() and not path.name.startswith(".")
+    )
+
+
 def _read_csv_safe(path: Path) -> pd.DataFrame:
     for encoding in ("utf-8", "latin-1", "cp1252"):
         try:
@@ -231,25 +244,28 @@ def _read_csv_safe(path: Path) -> pd.DataFrame:
     raise UnicodeDecodeError(f"Unable to decode {path} using utf-8/latin-1/cp1252")
 
 
-@st.cache_data(show_spinner="Loading NIBRS agency dataset...")
-def load_nibrs_demo_bundle(dataset_name: str) -> dict:
-    dataset_dir = _resolve_nibrs_demo_dataset_path(dataset_name)
-    if not dataset_dir.exists():
-        raise FileNotFoundError(f"NIBRS dataset folder not found: {dataset_dir}")
+def _read_uploaded_csv(blob: bytes, filename: str) -> pd.DataFrame:
+    for encoding in ("utf-8", "latin-1", "cp1252"):
+        try:
+            return pd.read_csv(io.BytesIO(blob), low_memory=False, encoding=encoding)
+        except UnicodeDecodeError:
+            continue
+    raise ValueError(f"Unable to decode uploaded CSV: {filename}")
 
-    file_map = {
-        "incident": "NIBRS_incident.csv",
-        "offense": "NIBRS_OFFENSE.csv",
-        "offense_type": "NIBRS_OFFENSE_TYPE.csv",
-        "agencies": "agencies.csv",
+
+def _build_nibrs_demo_bundle(tables: dict[str, pd.DataFrame], dataset_name: str) -> dict:
+    required = {
+        "incident": {"incident_id", "agency_id", "incident_date"},
+        "offense": {"offense_id", "incident_id", "offense_code"},
+        "offense_type": {"offense_code", "offense_category_name"},
+        "agencies": {"agency_id", "pub_agency_name", "state_name", "state_abbr"},
     }
-
-    tables: dict[str, pd.DataFrame] = {}
-    for key, filename in file_map.items():
-        file_path = dataset_dir / filename
-        if not file_path.exists():
-            raise FileNotFoundError(f"Missing {filename} in {dataset_dir}")
-        tables[key] = _read_csv_safe(file_path)
+    for table_name, required_cols in required.items():
+        missing = required_cols - set(tables[table_name].columns)
+        if missing:
+            raise ValueError(
+                f"Uploaded dataset is missing columns {sorted(missing)} in {table_name} table."
+            )
 
     offense = tables["offense"][["offense_id", "incident_id", "offense_code"]].copy()
     incident = tables["incident"][["incident_id", "agency_id", "incident_date"]].copy()
@@ -314,6 +330,65 @@ def load_nibrs_demo_bundle(dataset_name: str) -> dict:
         "state_abbr": state_abbr,
         "center": {"lat": center_lat, "lon": center_lon},
     }
+
+
+@st.cache_data(show_spinner="Loading NIBRS agency dataset...")
+def load_nibrs_demo_bundle(dataset_name: str) -> dict:
+    dataset_dir = _resolve_nibrs_demo_dataset_path(dataset_name)
+    if not dataset_dir.exists():
+        raise FileNotFoundError(f"NIBRS dataset folder not found: {dataset_dir}")
+
+    file_map = {
+        "incident": "NIBRS_incident.csv",
+        "offense": "NIBRS_OFFENSE.csv",
+        "offense_type": "NIBRS_OFFENSE_TYPE.csv",
+        "agencies": "agencies.csv",
+    }
+
+    tables: dict[str, pd.DataFrame] = {}
+    for key, filename in file_map.items():
+        file_path = dataset_dir / filename
+        if not file_path.exists():
+            raise FileNotFoundError(f"Missing {filename} in {dataset_dir}")
+        tables[key] = _read_csv_safe(file_path)
+
+    return _build_nibrs_demo_bundle(tables, dataset_name)
+
+
+@st.cache_data(show_spinner="Loading uploaded NIBRS dataset...")
+def load_uploaded_nibrs_demo_bundle(zip_bytes: bytes, upload_name: str) -> dict:
+    file_map = {
+        "incident": "NIBRS_incident.csv",
+        "offense": "NIBRS_OFFENSE.csv",
+        "offense_type": "NIBRS_OFFENSE_TYPE.csv",
+        "agencies": "agencies.csv",
+    }
+    tables: dict[str, pd.DataFrame] = {}
+
+    with zipfile.ZipFile(io.BytesIO(zip_bytes), "r") as zipped:
+        normalized = {
+            name.replace("\\", "/").split("/")[-1].lower(): name
+            for name in zipped.namelist()
+            if not name.endswith("/") and not name.startswith("__MACOSX")
+        }
+        for key, filename in file_map.items():
+            member = normalized.get(filename.lower())
+            if member is None:
+                raise FileNotFoundError(
+                    f"Uploaded zip must include {filename}, NIBRS_OFFENSE.csv, "
+                    "NIBRS_OFFENSE_TYPE.csv, and agencies.csv."
+                )
+            tables[key] = _read_uploaded_csv(zipped.read(member), filename)
+
+    return _build_nibrs_demo_bundle(tables, upload_name)
+
+
+@st.cache_data(show_spinner="Loading bundled NIBRS demo dataset...")
+def load_bundled_nibrs_demo_bundle(archive_name: str) -> dict:
+    archive_path = NIBRS_BUNDLED_ZIP_DIR / archive_name
+    if not archive_path.exists():
+        raise FileNotFoundError(f"Bundled demo archive not found: {archive_path}")
+    return load_uploaded_nibrs_demo_bundle(archive_path.read_bytes(), archive_name)
 
 
 def get_nibrs_available_dates(aligned_df: pd.DataFrame, window_size: int = 7) -> list[str]:
@@ -1664,18 +1739,62 @@ def render_agency_map_demo() -> None:
         )
 
     datasets = discover_nibrs_demo_datasets()
-    if not datasets:
-        st.error(
-            f"No NIBRS datasets were found under `{NIBRS_DEMO_BASE_DIR}`. "
-            "Keep the local NIBRS data folder beside the repository to use this page."
-        )
-        return
+    bundled_archives = discover_bundled_nibrs_demo_archives()
+    uploaded_zip = st.file_uploader(
+        "Upload a NIBRS dataset zip for online preview",
+        type=["zip"],
+        help=(
+            "Upload a zip containing NIBRS_incident.csv, NIBRS_OFFENSE.csv, "
+            "NIBRS_OFFENSE_TYPE.csv, and agencies.csv. This is mainly for Streamlit Cloud, "
+            "where the local NIBRS data folder is not available."
+        ),
+    )
 
-    selected_dataset = st.selectbox("NIBRS dataset", datasets, index=min(1, len(datasets) - 1))
-    try:
-        bundle = load_nibrs_demo_bundle(selected_dataset)
-    except Exception as exc:
-        st.error(f"Unable to load dataset `{selected_dataset}`: {exc}")
+    bundle = None
+    selected_dataset_label = ""
+    if uploaded_zip is not None:
+        st.info(
+            "Using the uploaded zip for this session. The file is not stored permanently by the app."
+        )
+        try:
+            bundle = load_uploaded_nibrs_demo_bundle(uploaded_zip.getvalue(), uploaded_zip.name)
+            selected_dataset_label = uploaded_zip.name
+        except Exception as exc:
+            st.error(f"Unable to load uploaded dataset: {exc}")
+            return
+    elif bundled_archives:
+        bundled_dataset = st.selectbox(
+            "Bundled online demo dataset",
+            bundled_archives,
+            index=0,
+            help="This packaged sample is included in the repository so the agency demo can run online.",
+        )
+        try:
+            bundle = load_bundled_nibrs_demo_bundle(bundled_dataset)
+            selected_dataset_label = bundled_dataset
+            st.success(
+                "Using the repository-bundled demo dataset. You can still upload your own zip above to override it."
+            )
+        except Exception as exc:
+            st.error(f"Unable to load bundled dataset `{bundled_dataset}`: {exc}")
+            return
+    elif datasets:
+        selected_dataset = st.selectbox("NIBRS dataset", datasets, index=min(1, len(datasets) - 1))
+        try:
+            bundle = load_nibrs_demo_bundle(selected_dataset)
+            selected_dataset_label = selected_dataset
+        except Exception as exc:
+            st.error(f"Unable to load dataset `{selected_dataset}`: {exc}")
+            return
+    else:
+        st.warning(
+            "No local NIBRS datasets are available in this deployment. "
+            "Upload a dataset zip above to use the agency-level demo online."
+        )
+        st.caption(
+            "Expected files inside the zip: NIBRS_incident.csv, NIBRS_OFFENSE.csv, "
+            "NIBRS_OFFENSE_TYPE.csv, and agencies.csv."
+        )
         return
 
     available_dates = get_nibrs_available_dates(bundle["aligned"])
@@ -1701,7 +1820,7 @@ def render_agency_map_demo() -> None:
     top_row = results.iloc[0]
     c1, c2, c3, c4 = st.columns(4)
     with c1:
-        metric_card("Agencies", f"{len(results):,}", selected_dataset, "#c07a50")
+        metric_card("Agencies", f"{len(results):,}", selected_dataset_label, "#c07a50")
     with c2:
         metric_card("Total Predicted", f"{results['predicted'].sum():.0f}", "Preview sum", "#c07a50")
     with c3:
