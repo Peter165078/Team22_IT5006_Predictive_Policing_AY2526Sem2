@@ -18,9 +18,6 @@ import streamlit.components.v1 as components
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(PROJECT_ROOT))
 
-from src.data.dataset_builder import build_district_hour_dataset
-from src.data.processor import DataProcessor
-
 MODEL_NAME = "HistGradientBoosting"
 MODEL_PATH = PROJECT_ROOT / "artifacts" / "models" / "hist_gradient_boosting.pkl"
 PREDICTION_SOURCE_DIR = PROJECT_ROOT / "apps" / "dashboard" / "split_data_by_year"
@@ -515,6 +512,8 @@ def render_agency_leaflet_map(results: pd.DataFrame, center: dict[str, float]) -
 
 
 def build_prediction_dataset() -> None:
+    from src.data.dataset_builder import build_district_hour_dataset
+
     if PREDICTION_DATA_PATH.exists():
         return
     build_district_hour_dataset(
@@ -529,6 +528,8 @@ def build_prediction_dataset() -> None:
 
 @st.cache_resource(show_spinner="Preparing prediction engine...")
 def load_prediction_engine() -> dict:
+    from src.data.processor import DataProcessor
+
     if not MODEL_PATH.exists():
         raise FileNotFoundError(
             "Missing hist_gradient_boosting.pkl. Keep the model artifact in artifacts/models/ "
